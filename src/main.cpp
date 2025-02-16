@@ -392,6 +392,7 @@ bool InitializeDirect3D()
     camView = XMMatrixLookAtLH(camPosition, camTarget, camUp);
 
     // create projection matrix for camera
+    // sets up a perspective projection using FOV, aspect ratio, and near/far planes.
     float fov = XMConvertToRadians(45.0f);
     float aspectRatio = (float)Width / Height;
     camProjection = XMMatrixPerspectiveFovLH(fov, aspectRatio, 0.1f, 100.0f);
@@ -489,7 +490,8 @@ void UpdateScene()
     cube2World = Scale2 * Rotation2 * Translation2; // scale first, then rotate, then translate
 }
 
-// some fuckass procedure to launch win32 window, thank god for tutorials prayge
+// Win32 window procedure (handles input events & system messages) 
+// thank god for tutorials prayge
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
@@ -506,7 +508,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 // release objects
-// clear this shit up, will probably use comPtr for better memory management
+// to clean up later! will replace raw pointers with ComPtr for better memory management
 void ReleaseObjects()
 {
     if (swapChain)
