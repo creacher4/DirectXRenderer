@@ -37,37 +37,16 @@ This will:
 
 ---
 
-### **2️⃣ Manual Compilation**
-If you prefer manual compilation, follow these steps:
+### **2️⃣ Manual Compilation (Optional)**
+If `tools/build.bat` does not work or you want to customize the build process, you can manually compile the project.
 
-#### **🔹 Set Up the Build Environment**
-Run this command to configure MSVC (Microsoft’s compiler):
+1. **Navigate to the project directory** (run `cd "Path\To\Directory\DirectXRenderer"`)
+2. **Set up the MSVC build environment** (run `vcvars64.bat`).
+3. **Compile shaders** using `fxc.exe`.
+4. **Compile the main application** using `cl.exe`.
+5. **Run the executable** located in `/build/`.
 
-```sh
-cmd /k "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-```
-
-#### **🔹 Compile Shaders**
-Compile the vertex and pixel shaders:
-
-```sh
-"C:\Path\To\fxc.exe" /T vs_5_0 /E VSMain /Fo shaders/VertexShader.cso shaders/vertexShader.hlsl
-"C:\Path\To\fxc.exe" /T ps_5_0 /E PSMain /Fo shaders/PixelShader.cso shaders/pixelShader.hlsl
-```
-
-**Note:** Update `C:\Path\To\fxc.exe` to the correct location on your system.
-
-#### **🔹 Compile the Main Application**
-```sh
-cl src\main.cpp /Fe:build/MyDX11App.exe /link user32.lib gdi32.lib d3d11.lib dxgi.lib d3dcompiler.lib
-```
-
-#### **🔹 Run the Application**
-After compilation, the output executable will be located in `/build/`.  
-To run it, use:
-```sh
-build/MyDX11App.exe
-```
+For exact compiler flags, see `tools/build.bat`.
 
 ---
 
@@ -106,13 +85,12 @@ git push origin main
 ## 🔮 **Planned Architectural Changes**
 - **Object-Oriented Programming (Encapsulation)**
 - **Memory Management (Smart Pointers)**
-- Other Additional changes
+- **Further structural improvements (TBD)**
 
 ---
 
 ## 📜 **Credits**
-This project follows a tutorial from **[Braynzar Soft](https://www.braynzarsoft.net/viewtutorial/q16390-braynzar-soft-directx-11-tutorials)**  
-Originally developed for university coursework, this project has since evolved into an independent learning experiment focused on modernizing and improving DirectX 11 rendering techniques
+This project follows a tutorial from **[Braynzar Soft](https://www.braynzarsoft.net/viewtutorial/q16390-braynzar-soft-directx-11-tutorials)**. Originally developed for university coursework, this project has since evolved into an independent learning experiment focused on modernizing and improving DirectX 11 rendering techniques.
 
 ---
 
