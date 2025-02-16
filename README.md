@@ -59,10 +59,12 @@ Compile the vertex and pixel shaders:
 
 #### **🔹 Compile the Main Application**
 ```sh
-cl src\main.cpp /EHsc /Zi /MD /Fe:build/MyDX11App.exe /link /subsystem:windows user32.lib gdi32.lib d3d11.lib dxgi.lib d3dcompiler.lib
+cl src\main.cpp /Fe:build/MyDX11App.exe /link user32.lib gdi32.lib d3d11.lib dxgi.lib d3dcompiler.lib
 ```
 
 #### **🔹 Run the Application**
+After compilation, the output executable will be located in `/build/`.  
+To run it, use:
 ```sh
 build/MyDX11App.exe
 ```
