@@ -1,21 +1,21 @@
-# 🎮 DirectX 11 Renderer
+# DirectX 11 Renderer
 
-A **DirectX 11-based 3D graphics renderer** built in **C++**. Originally based on **Braynzar Soft’s DX11 tutorials**, now evolving into a more **structured and modern** DirectX engine.
+A DirectX 11-based 3D graphics renderer built in C++. Originally based on [Braynzar Soft’s DX11 tutorials](https://www.braynzarsoft.net/viewtutorial/q16390-braynzar-soft-directx-11-tutorials), this project has evolved into a more structured and modern DirectX engine.
 
 ---
 
-## 🛠 **Setup & Installation**
+## Setup & Installation
 
-### **🔹 Prerequisites**
+### Prerequisites
 
 Before running the project, ensure you have:
 
-- ✅ **Windows 10/11** (Tested on Windows 11 Pro 24H2)
-- ✅ **Visual Studio Build Tools** or **full Visual Studio**
-- ✅ **Windows SDK** (for DirectX & shader compilation)
-- ✅ **Git** (for version control)
+- Windows 10/11
+- Visual Studio (or the Build Tools)
+- Windows SDK (for DirectX and shader compilation)
+- Git
 
-### **📥 Cloning the Repository**
+### Cloning the Repository
 
 ```sh
 git clone https://github.com/creacher4/DirectXRenderer.git
@@ -24,48 +24,22 @@ cd DirectXRenderer
 
 ---
 
-## 🚀 **Running the Renderer**
+## Running the Renderer
 
-### 🏃 Run the Precompiled Executable
+### Using the Precompiled Executable
 
-You **don't need to compile anything**! Simply navigate to the `build/` directory
+Navigate to the `build/` directory and run the executable:
 
 ```sh
 cd build
-```
-
-and run
-
-```sh
 DX11App.exe
 ```
 
 ---
 
-### 🛠 **Advanced Users / Manual Compilation**
+## Updating the Project
 
-If you want to modify or extend the renderer, you can manually compile it by following these steps:
-
-#### **🛠 Shader Compilation (Optional)**
-
-Use **FXC (Shader Compiler)**. It's optional because the shaders come precompiled (unless you change how the shaders work too).
-
-```sh
-fxc /T vs_5_0 /E main /Fo shaders/vertexShader.cso shaders/vertexShader.hlsl
-fxc /T ps_5_0 /E main /Fo shaders/pixelShader.cso shaders/pixelShader.hlsl
-```
-
-#### **🛠 Compiling with MSVC (Command Line)**
-
-```sh
-cl /EHsc /Zi /MD /std:c++20 /O2 /Fo"build\" src\main.cpp /Fe"build\DX11App.exe" /link /subsystem:windows user32.lib gdi32.lib d3d11.lib dxgi.lib d3dcompiler.lib
-```
-
----
-
-## 🔄 **Updating the Project**
-
-To get the latest version:
+To update your local repository with the latest version:
 
 ```sh
 git pull origin main
@@ -75,52 +49,37 @@ To push your changes:
 
 ```sh
 git add .
-git commit -m "Updated DX11 OOP structure"
+git commit -m "Updated DX11 renderer with camera and rotating cubes"
 git push origin main
 ```
 
 ---
 
-## ❓ **Troubleshooting**
+## Current Progress
 
-🔴 **Shader Compilation Errors**  
-✔ Ensure you have the **correct Windows SDK version**  
-✔ Verify the `fxc.exe` path is correct (`C:\Program Files (x86)\Windows Kits\10\bin\x64\fxc.exe`)
-
-🔴 **`cl.exe` Not Recognized**  
-✔ Open **Developer Command Prompt** or manually set up the VS build environment:
-
-```sh
-"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-```
+- Refactored to an object-oriented structure
+- Rewrote DX11 initialization into a structured class
+- Added depth buffering
+- Created a render of two rotating cubes
 
 ---
 
-## 🏗 **Current Progress**
+## Upcoming Features
 
-✅ **Refactored to Object-Oriented Structure**  
-✅ **Rewrote DX11 initialization into a structured class**  
-✅ **Successfully rendering a colored triangle**
-
----
-
-## 🔮 **Upcoming Features**
-
-🚀 **Model Loading (OBJ, FBX Support)**  
-💡 **Lighting (Phong, Point, Directional Lights)**  
-🎨 **Texture Mapping (Loading & Sampling Textures)**  
-🎥 **Camera System (WASD + Mouse Look)**  
-🔄 **Game Loop Optimizations & FPS Locking**
+- Model Loading (OBJ, FBX support)
+- Lighting (Phong, point, and directional lights)
+- Texture Mapping (loading and sampling textures)
+- Advanced camera system (WASD + mouse look)
+- Game loop optimizations & FPS locking
 
 ---
 
-## 📜 **Credits**
+## Credits
 
-🔹 Based on **Braynzar Soft’s DX11 tutorials**  
-🔹 Originally developed for **university coursework**, now evolving into a **standalone project**.
+Based on Braynzar Soft’s DX11 tutorials. Originally developed for university coursework, now evolving into a standalone project.
 
 ---
 
-## 📌 **License**
+## License
 
-This project is for **educational purposes only** (for now). No commercial use intended yet.
+This project is for educational purposes as of now. No commercial use is intended.
