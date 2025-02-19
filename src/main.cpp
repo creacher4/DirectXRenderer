@@ -1,14 +1,18 @@
+// for some reason, if i don't include this header file, the compiler will throw a bunch of string errors so pls just keep this here
 #define UNICODE
 
+// other necessary headers
 #include <windows.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include <string>
 
+// link libraries
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
+// not sure if using namespace is a good idea but i can always change it later
 using namespace DirectX;
 
 // main class
@@ -49,6 +53,7 @@ struct Vertex
     XMFLOAT4 color;
 };
 
+// constructor and destructor
 DirectXRenderer::DirectXRenderer(HINSTANCE hInstance) : hInstance(hInstance), hWnd(nullptr), driverType(D3D_DRIVER_TYPE_HARDWARE),
                                                         featureLevel(D3D_FEATURE_LEVEL_11_0), device(nullptr), context(nullptr),
                                                         swapChain(nullptr), renderTargetView(nullptr), vertexShader(nullptr),
@@ -59,6 +64,7 @@ DirectXRenderer::~DirectXRenderer()
     Cleanup();
 }
 
+// initialize and run
 bool DirectXRenderer::Initialize()
 {
     if (!InitWindow())
@@ -85,6 +91,7 @@ void DirectXRenderer::Run()
     }
 }
 
+// initialize window and directx
 bool DirectXRenderer::InitWindow()
 {
     WNDCLASSEX wc = {0};
@@ -103,6 +110,7 @@ bool DirectXRenderer::InitWindow()
     hWnd = CreateWindow(L"DirectXWindowClass", L"DirectX Renderer", WS_OVERLAPPEDWINDOW,
                         CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, nullptr);
 
+    // if window creation failed
     if (!hWnd)
         return false;
 
@@ -111,13 +119,14 @@ bool DirectXRenderer::InitWindow()
     return true;
 }
 
+// initialize directx
 bool DirectXRenderer::InitDirectX()
 {
     DXGI_SWAP_CHAIN_DESC sd = {0};
     sd.BufferCount = 1;
     sd.BufferDesc.Width = 800;
     sd.BufferDesc.Height = 600;
-    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // standard 32-bit colour format
     sd.BufferDesc.RefreshRate.Numerator = 60;
     sd.BufferDesc.RefreshRate.Denominator = 1;
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -152,7 +161,10 @@ bool DirectXRenderer::InitDirectX()
     vp.TopLeftY = 0;
     context->RSSetViewports(1, &vp);
 
-    // compile and create vertex shader
+    // compiles vertex shader from hlsl file. if fail, check for:
+    // incorrect file path
+    // hlsl syntax errors
+    // missing shader model (vs_5_0)
     ID3DBlob *vsBlob = nullptr;
     hr = D3DCompileFromFile(L"shaders/vertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vsBlob, nullptr);
     if (FAILED(hr))
@@ -179,7 +191,10 @@ bool DirectXRenderer::InitDirectX()
 
     context->IASetInputLayout(inputLayout);
 
-    // compile and create pixel shader
+    // compiles pixel shader from hlsl file. if fail, check for:
+    // incorrect file path
+    // hlsl syntax errors
+    // missing shader model (ps_5_0)
     ID3DBlob *psBlob = nullptr;
     hr = D3DCompileFromFile(L"shaders/pixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", 0, 0, &psBlob, nullptr);
     if (FAILED(hr))
@@ -213,9 +228,10 @@ bool DirectXRenderer::InitDirectX()
     return true;
 }
 
+// render
 void DirectXRenderer::Render()
 {
-    float clearColor[4] = {0.0f, 0.2f, 0.4f, 1.0f};
+    float clearColor[4] = {0.0f, 0.2f, 0.4f, 1.0f}; // (RGBA) some blueish colour
     context->ClearRenderTargetView(renderTargetView, clearColor);
 
     UINT stride = sizeof(Vertex);
@@ -231,10 +247,14 @@ void DirectXRenderer::Render()
     swapChain->Present(0, 0);
 }
 
-// cleanup
+// cleanup resources before closing since im using raw pointers
+// i know i should be using smart pointers but i couldn't get them to work for the life of me
+// problem for future me
 void DirectXRenderer::Cleanup()
 {
+
     if (context)
+        // clear gpu state before releasing resources
         context->ClearState();
     if (vertexBuffer)
         vertexBuffer->Release();
@@ -254,7 +274,10 @@ void DirectXRenderer::Cleanup()
         device->Release();
 }
 
-// some bullshit window procedure. thank god tutorials exist prayge
+// some bullshit window procedure
+// window event handler WndProc
+// handles OS messages
+// if window is destroyed, post quit message
 LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -269,7 +292,6 @@ LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam
 }
 
 // entry point
-
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
     DirectXRenderer renderer(hInstance);
