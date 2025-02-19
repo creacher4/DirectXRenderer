@@ -1,24 +1,16 @@
-cbuffer cbPerObject
-{
-    float4x4 WVP;
+struct VS_INPUT {
+    float3 position : POSITION;  // Vertex position
+    float4 color : COLOR;        // Vertex color
 };
 
-struct VS_INPUT
-{
-    float4 Pos : POSITION;
-    float4 Color : COLOR;
+struct PS_INPUT {
+    float4 position : SV_POSITION; // Screen-space position
+    float4 color : COLOR;          // Passed color
 };
 
-struct VS_OUTPUT
-{
-    float4 Pos : SV_POSITION;
-    float4 Color : COLOR;
-};
-
-VS_OUTPUT VSMain(VS_INPUT input)
-{
-    VS_OUTPUT output;
-    output.Pos = mul(input.Pos, WVP); // Transform using WVP matrix
-    output.Color = input.Color;
+PS_INPUT main(VS_INPUT input) {
+    PS_INPUT output;
+    output.position = float4(input.position, 1.0f); // Convert to 4D vector
+    output.color = input.color; // Pass color to pixel shader
     return output;
 }

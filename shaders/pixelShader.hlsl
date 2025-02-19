@@ -1,10 +1,8 @@
-struct VS_OUTPUT
-{
-    float4 Pos : SV_POSITION;
-    float4 Color : COLOR;
+struct PS_INPUT {
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
 };
 
-float4 PSMain(VS_OUTPUT input) : SV_TARGET
-{
-    return input.Color; // Uses interpolated color from the rasterizer
+float4 main(PS_INPUT input) : SV_Target {
+    return input.color; // Simply return the vertex color
 }
