@@ -1,16 +1,25 @@
-struct VS_INPUT {
-    float3 position : POSITION;  // Vertex position
-    float4 color : COLOR;        // Vertex color
+cbuffer ConstantBuffer : register(b0)
+{
+    matrix wvp; // Must match struct ConstantBuffer { XMMATRIX wvp; } in C++
 };
 
-struct PS_INPUT {
-    float4 position : SV_POSITION; // Screen-space position
-    float4 color : COLOR;          // Passed color
+struct VS_INPUT
+{
+    float3 position : POSITION;
+    float4 color    : COLOR;
 };
 
-PS_INPUT main(VS_INPUT input) {
+struct PS_INPUT
+{
+    float4 position : SV_POSITION;
+    float4 color    : COLOR;
+};
+
+PS_INPUT main(VS_INPUT input)
+{
     PS_INPUT output;
-    output.position = float4(input.position, 1.0f); // Convert to 4D vector
-    output.color = input.color; // Pass color to pixel shader
+    // Multiply by wvp to go from object space -> world space -> view space -> projection space
+    output.position = mul(float4(input.position, 1.0f), wvp);
+    output.color = input.color;
     return output;
 }
