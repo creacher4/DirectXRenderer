@@ -36,17 +36,22 @@ private:
     HWND hWnd;
     D3D_DRIVER_TYPE driverType;
     D3D_FEATURE_LEVEL featureLevel;
-    ID3D11Device *device;
-    ID3D11DeviceContext *context;
-    IDXGISwapChain *swapChain;
-    ID3D11RenderTargetView *renderTargetView;
-    ID3D11VertexShader *vertexShader;
-    ID3D11PixelShader *pixelShader;
-    ID3D11InputLayout *inputLayout;
-    ID3D11Buffer *vertexBuffer;
-    ID3D11Buffer *indexBuffer;
-    ID3D11Buffer *constantBuffer;
-    ID3D11DepthStencilView *depthStencilView;
+    ID3D11Device *device = nullptr;
+    ID3D11DeviceContext *context = nullptr;
+    IDXGISwapChain *swapChain = nullptr;
+    ID3D11RenderTargetView *renderTargetView = nullptr;
+    ID3D11VertexShader *vertexShader = nullptr;
+    ID3D11PixelShader *pixelShader = nullptr;
+    ID3D11InputLayout *inputLayout = nullptr;
+    ID3D11Buffer *vertexBuffer = nullptr;
+    ID3D11Buffer *indexBuffer = nullptr;
+    ID3D11Buffer *constantBuffer = nullptr;
+    ID3D11DepthStencilView *depthStencilView = nullptr;
+
+    // create a wireframe rendering mode
+    ID3D11RasterizerState *solidRasterizerState = nullptr;
+    ID3D11RasterizerState *wireframeRasterizerState = nullptr;
+    bool wireframeMode = false; // toggle wireframe mode
 
     float rotationAngle;
 
@@ -92,7 +97,7 @@ DirectXRenderer::~DirectXRenderer()
     Cleanup();
 }
 
-// initialize and run
+// initialize window and directx
 bool DirectXRenderer::Initialize()
 {
     if (!InitWindow())
@@ -137,8 +142,17 @@ bool DirectXRenderer::InitWindow()
 
     RECT rc = {0, 0, 800, 600};
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-    hWnd = CreateWindow(L"DirectXWindowClass", L"DirectX Renderer", WS_OVERLAPPEDWINDOW,
-                        CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance, nullptr);
+    hWnd = CreateWindow(
+        L"DirectXWindowClass",
+        L"DirectX Renderer",
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        rc.right - rc.left, rc.bottom - rc.top,
+        nullptr,
+        nullptr,
+        hInstance,
+        this // Now 'this' is the lpParam
+    );
 
     // if window creation failed
     if (!hWnd)
@@ -167,6 +181,24 @@ bool DirectXRenderer::InitDirectX()
 
     HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr, driverType, nullptr, 0, nullptr, 0,
                                                D3D11_SDK_VERSION, &sd, &swapChain, &device, &featureLevel, &context);
+    if (FAILED(hr))
+        return false;
+
+    D3D11_RASTERIZER_DESC rasterDesc;
+    ZeroMemory(&rasterDesc, sizeof(rasterDesc));
+    rasterDesc.CullMode = D3D11_CULL_BACK;
+    rasterDesc.FrontCounterClockwise = false;
+    rasterDesc.DepthClipEnable = true;
+
+    // create solid rasterizer state
+    rasterDesc.FillMode = D3D11_FILL_SOLID;
+    hr = device->CreateRasterizerState(&rasterDesc, &solidRasterizerState);
+    if (FAILED(hr))
+        return false;
+
+    // create wireframe rasterizer state
+    rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
+    hr = device->CreateRasterizerState(&rasterDesc, &wireframeRasterizerState);
     if (FAILED(hr))
         return false;
 
@@ -238,7 +270,7 @@ bool DirectXRenderer::InitDirectX()
     D3D11_INPUT_ELEMENT_DESC layout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-    };
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0}};
     UINT numElements = ARRAYSIZE(layout);
 
     hr = device->CreateInputLayout(layout, numElements, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
@@ -265,42 +297,42 @@ bool DirectXRenderer::InitDirectX()
     // define vertices (counter-clockwise order)
     Vertex cubeVertices[] =
         {
-            //         position             colour
-            {XMFLOAT3(-0.5f, 0.5f, -0.5f), XMFLOAT4(1, 0, 0, 1)},  // 0: Front-Top-Left
-            {XMFLOAT3(0.5f, 0.5f, -0.5f), XMFLOAT4(0, 1, 0, 1)},   // 1: Front-Top-Right
-            {XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(0, 0, 1, 1)},  // 2: Front-Bottom-Right
-            {XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1, 1, 1, 1)}, // 3: Front-Bottom-Left
+            //              position                  colour
+            {XMFLOAT3(-0.5f, 0.5f, -0.5f), XMFLOAT4(1, 0, 0, 1)},  // 0: front-top-left
+            {XMFLOAT3(0.5f, 0.5f, -0.5f), XMFLOAT4(0, 1, 0, 1)},   // 1: front-top-right
+            {XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(0, 0, 1, 1)},  // 2: front-bottom-right
+            {XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1, 1, 1, 1)}, // 3: front-bottom-left
 
-            {XMFLOAT3(-0.5f, 0.5f, 0.5f), XMFLOAT4(1, 1, 0, 1)},  // 4: Back-Top-Left
-            {XMFLOAT3(0.5f, 0.5f, 0.5f), XMFLOAT4(0, 1, 1, 1)},   // 5: Back-Top-Right
-            {XMFLOAT3(0.5f, -0.5f, 0.5f), XMFLOAT4(1, 0, 1, 1)},  // 6: Back-Bottom-Right
-            {XMFLOAT3(-0.5f, -0.5f, 0.5f), XMFLOAT4(0, 0, 0, 1)}, // 7: Back-Bottom-Left
+            {XMFLOAT3(-0.5f, 0.5f, 0.5f), XMFLOAT4(1, 1, 0, 1)}, // 4: back-top-left
+            {XMFLOAT3(0.5f, 0.5f, 0.5f), XMFLOAT4(0, 1, 1, 1)},  // 5: back-top-right
+            {XMFLOAT3(0.5f, -0.5f, 0.5f), XMFLOAT4(1, 0, 1, 1)}, // 6: back-bottom-right
+            {XMFLOAT3(-0.5f, -0.5f, 0.5f), XMFLOAT4(0, 0, 0, 1)} // 7: back-bottom-left
         };
 
     // define indices
     UINT cubeIndices[] =
         {
-            // Front Face
+            // front face
             0, 1, 2,
             0, 2, 3,
 
-            // Back Face
+            // back face
             5, 4, 7,
             5, 7, 6,
 
-            // Left Face
+            // left face
             4, 0, 3,
             4, 3, 7,
 
-            // Right Face
+            // right face
             1, 5, 6,
             1, 6, 2,
 
-            // Top Face
+            // top face
             4, 5, 1,
             4, 1, 0,
 
-            // Bottom Face
+            // bottom face
             3, 2, 6,
             3, 6, 7};
 
@@ -349,11 +381,24 @@ bool DirectXRenderer::InitDirectX()
 void DirectXRenderer::Update()
 {
     rotationAngle += 0.0005f; // arbitrary value, can be adjusted
+
+    // other logic can be added here
+    // e.g. camera movement etc..
 }
 
 // render
 void DirectXRenderer::Render()
 {
+    // set rasterizer state
+    if (wireframeMode)
+    {
+        context->RSSetState(wireframeRasterizerState);
+    }
+    else
+    {
+        context->RSSetState(solidRasterizerState);
+    }
+
     // clear colour buffer
     float clearColor[4] = {0.0f, 0.2f, 0.4f, 1.0f}; // (RGBA) some blueish colour
     context->ClearRenderTargetView(renderTargetView, clearColor);
@@ -362,9 +407,9 @@ void DirectXRenderer::Render()
     context->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     // setup a static camera and matrices
-    XMVECTOR Eye = XMVectorSet(0.0f, 0.0f, -3.0f, 0.0f);
-    XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-    XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    XMVECTOR Eye = XMVectorSet(0.0f, 0.0f, -3.0f, 0.0f); // camera position
+    XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);   // camera target
+    XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);   // camera up vector
 
     // create view and projection matrices
     XMMATRIX view = XMMatrixLookAtLH(Eye, At, Up);
@@ -425,27 +470,61 @@ void DirectXRenderer::Cleanup()
         renderTargetView->Release();
     if (swapChain)
         swapChain->Release();
-    if (context)
-        context->Release();
-    if (device)
-        device->Release();
     if (constantBuffer)
         constantBuffer->Release();
     if (indexBuffer)
         indexBuffer->Release();
+    if (solidRasterizerState)
+        solidRasterizerState->Release();
+    if (wireframeRasterizerState)
+        wireframeRasterizerState->Release();
+
+    if (context)
+        context->Release();
+    if (device)
+        device->Release();
 }
 
-// Window procedure to handle OS messages
-// This function processes events such as window creation, destruction, and other commands.
-// Currently, it handles the WM_DESTROY message to post a quit message.
-// Future enhancements may include handling camera movement and input.
+// window procedure to handle OS messages
+// processes events
+// right now, it's handling a quit message
+// handles rasterizer state
+// future changes include handling camera movement and input
 LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
+    case WM_CREATE:
+    {
+        // store the 'this' pointer in the window user data since wireframemode = !wireframemode; can't access it directly
+        LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+        DirectXRenderer *pThis = reinterpret_cast<DirectXRenderer *>(pCreateStruct->lpCreateParams);
+
+        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
+        return 0;
+    }
+
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+
+    case WM_KEYDOWN:
+    {
+        DirectXRenderer *pThis = reinterpret_cast<DirectXRenderer *>(
+            GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
+        if (pThis)
+        {
+            // r for rasterizer
+            // toggles wireframe mode
+            if (wParam == 'R')
+            {
+                pThis->wireframeMode = !pThis->wireframeMode;
+            }
+        }
+        break;
+    }
+
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
