@@ -61,6 +61,7 @@ git push origin main
 - Rewrote DX11 initialization into a structured class
 - Added depth buffering
 - Created a render of two rotating cubes
+- Added Rasterizer State toggling (solid/wireframe)
 
 ---
 
