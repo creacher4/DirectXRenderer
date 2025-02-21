@@ -77,3 +77,4 @@
 - Improve project documentation (in progress).
 - Fix the texture mapping (in progress).
 - Setup Basic lighting techniques (Phong lighting, point lights).
+- Add new repo issue about CMake + compilation (unless solved).
