@@ -68,6 +68,7 @@
 - Created a `.gitignore` to exclude unnecessary files.
 - Implemented texture mapping via DirectXTK (work in progress).
 - Updated README.md and removed troubleshooting section.
+- Tried to fix a bug with CMake that caused configuration to fail
 
 ---
 
