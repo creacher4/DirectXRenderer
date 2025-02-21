@@ -1,0 +1,30 @@
+# ignore build artifacts
+/build/
+/Debug/
+/x64/
+*.exe
+*.ilk
+*.pdb
+*.obj
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# ignore CMake build files
+/CMakeFiles/
+/.cmake/
+/pkgRedirects/
+CMakeCache.txt
+CMakeLists.txt.user
+cmake_install.cmake
+CMakeConfigureLog.yaml
+*.stamp
+*.depend
+*.list
+
+# ignore shader compilation outputs
+/shaders/*.cso
+
+# ignore VSCode settings
+/.vscode/

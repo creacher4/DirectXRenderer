@@ -4,9 +4,11 @@
 
 // other necessary headers
 #include <windows.h>
+#include <windowsx.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
+#include "WICTextureLoader.h"
 #include <string>
 
 // link libraries
@@ -32,21 +34,43 @@ private:
     void Render();
     void Cleanup();
 
+    // camera members
+    XMFLOAT3 cameraPosition;
+    float cameraYaw;
+    float cameraPitch;
+    bool leftMouseDown;
+    POINT prevMousePos;
+
+    // directx members
     HINSTANCE hInstance;
     HWND hWnd;
     D3D_DRIVER_TYPE driverType;
     D3D_FEATURE_LEVEL featureLevel;
+
+    // device and swap chain
     ID3D11Device *device = nullptr;
     ID3D11DeviceContext *context = nullptr;
     IDXGISwapChain *swapChain = nullptr;
+
+    // render target view
     ID3D11RenderTargetView *renderTargetView = nullptr;
+
+    // shaders and input layout
     ID3D11VertexShader *vertexShader = nullptr;
     ID3D11PixelShader *pixelShader = nullptr;
     ID3D11InputLayout *inputLayout = nullptr;
+
+    // buffers
     ID3D11Buffer *vertexBuffer = nullptr;
     ID3D11Buffer *indexBuffer = nullptr;
     ID3D11Buffer *constantBuffer = nullptr;
+
+    // depth/stencil buffer
     ID3D11DepthStencilView *depthStencilView = nullptr;
+
+    // texture
+    ID3D11SamplerState *samplerState = nullptr;
+    ID3D11ShaderResourceView *textureRV = nullptr;
 
     // create a wireframe rendering mode
     ID3D11RasterizerState *solidRasterizerState = nullptr;
@@ -63,6 +87,7 @@ struct Vertex
 {
     XMFLOAT3 position;
     XMFLOAT4 color;
+    XMFLOAT2 texCoord;
 };
 
 // constant buffer structure
@@ -88,8 +113,14 @@ DirectXRenderer::DirectXRenderer(HINSTANCE hInstance)
       indexBuffer(nullptr),
       constantBuffer(nullptr),
       depthStencilView(nullptr),
-      rotationAngle(0.0f)
+      rotationAngle(0.0f),
+      cameraPosition(0.0f, 0.0f, -3.0f),
+      cameraYaw(0.0f),
+      cameraPitch(0.0f),
+      leftMouseDown(false)
 {
+    prevMousePos.x = 0;
+    prevMousePos.y = 0;
 }
 
 DirectXRenderer::~DirectXRenderer()
@@ -151,7 +182,7 @@ bool DirectXRenderer::InitWindow()
         nullptr,
         nullptr,
         hInstance,
-        this // Now 'this' is the lpParam
+        this // pass 'this' pointer to the window procedure
     );
 
     // if window creation failed
@@ -240,6 +271,27 @@ bool DirectXRenderer::InitDirectX()
     // bind render target and depth/stencil view to the output-merger stage
     context->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
 
+    // texture loading
+    // no png set yet
+    // save png to assets folder and change the path
+    hr = CreateWICTextureFromFile(device, context, L"assets/image.png", nullptr, &textureRV);
+    if (FAILED(hr))
+        return false;
+
+    D3D11_SAMPLER_DESC sampDesc;
+    ZeroMemory(&sampDesc, sizeof(sampDesc));
+    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sampDesc.MinLOD = 0;
+    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    hr = device->CreateSamplerState(&sampDesc, &samplerState);
+    if (FAILED(hr))
+        return false;
+
     // set the viewport
     D3D11_VIEWPORT vp;
     vp.Width = (FLOAT)800;
@@ -297,16 +349,16 @@ bool DirectXRenderer::InitDirectX()
     // define vertices (counter-clockwise order)
     Vertex cubeVertices[] =
         {
-            //              position                  colour
-            {XMFLOAT3(-0.5f, 0.5f, -0.5f), XMFLOAT4(1, 0, 0, 1)},  // 0: front-top-left
-            {XMFLOAT3(0.5f, 0.5f, -0.5f), XMFLOAT4(0, 1, 0, 1)},   // 1: front-top-right
-            {XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(0, 0, 1, 1)},  // 2: front-bottom-right
-            {XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1, 1, 1, 1)}, // 3: front-bottom-left
+            //              position                  colour      texture coordinates
+            {XMFLOAT3(-0.5f, 0.5f, -0.5f), XMFLOAT4(1, 0, 0, 1), XMFLOAT2(0.0f, 0.0f)},  // 0: front-top-left
+            {XMFLOAT3(0.5f, 0.5f, -0.5f), XMFLOAT4(0, 1, 0, 1), XMFLOAT2(1.0f, 0.0f)},   // 1: front-top-right
+            {XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(0, 0, 1, 1), XMFLOAT2(1.0f, 1.0f)},  // 2: front-bottom-right
+            {XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1, 1, 1, 1), XMFLOAT2(0.0f, 1.0f)}, // 3: front-bottom-left
 
-            {XMFLOAT3(-0.5f, 0.5f, 0.5f), XMFLOAT4(1, 1, 0, 1)}, // 4: back-top-left
-            {XMFLOAT3(0.5f, 0.5f, 0.5f), XMFLOAT4(0, 1, 1, 1)},  // 5: back-top-right
-            {XMFLOAT3(0.5f, -0.5f, 0.5f), XMFLOAT4(1, 0, 1, 1)}, // 6: back-bottom-right
-            {XMFLOAT3(-0.5f, -0.5f, 0.5f), XMFLOAT4(0, 0, 0, 1)} // 7: back-bottom-left
+            {XMFLOAT3(-0.5f, 0.5f, 0.5f), XMFLOAT4(1, 1, 0, 1), XMFLOAT2(1.0f, 0.0f)}, // 4: back-top-left
+            {XMFLOAT3(0.5f, 0.5f, 0.5f), XMFLOAT4(0, 1, 1, 1), XMFLOAT2(0.0f, 0.0f)},  // 5: back-top-right
+            {XMFLOAT3(0.5f, -0.5f, 0.5f), XMFLOAT4(1, 0, 1, 1), XMFLOAT2(0.0f, 1.0f)}, // 6: back-bottom-right
+            {XMFLOAT3(-0.5f, -0.5f, 0.5f), XMFLOAT4(0, 0, 0, 1), XMFLOAT2(1.0f, 1.0f)} // 7: back-bottom-left
         };
 
     // define indices
@@ -380,10 +432,57 @@ bool DirectXRenderer::InitDirectX()
 // update
 void DirectXRenderer::Update()
 {
+    // transformations
+    // cube rotation
     rotationAngle += 0.0005f; // arbitrary value, can be adjusted
 
     // other logic can be added here
-    // e.g. camera movement etc..
+
+    // camera movement
+    float moveSpeed = 0.002f;
+    float cosPitch = cosf(cameraPitch);
+    float sinPitch = sinf(cameraPitch);
+    float cosYaw = cosf(cameraYaw);
+    float sinYaw = sinf(cameraYaw);
+
+    // define move forward
+    XMVECTOR forward = XMVectorSet(
+        cosPitch * sinYaw,
+        sinPitch,
+        cosPitch * cosYaw,
+        0.0f);
+    forward = XMVector3Normalize(forward);
+
+    // define move right by defining the cross product of forward and up
+    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    XMVECTOR right = XMVector3Cross(up, forward);
+    right = XMVector3Normalize(right);
+
+    // handle input
+    if (GetAsyncKeyState('W') & 0x8000)
+    {
+        XMVECTOR pos = XMLoadFloat3(&cameraPosition);
+        pos = XMVectorAdd(pos, XMVectorScale(forward, moveSpeed));
+        XMStoreFloat3(&cameraPosition, pos);
+    }
+    if (GetAsyncKeyState('S') & 0x8000)
+    {
+        XMVECTOR pos = XMLoadFloat3(&cameraPosition);
+        pos = XMVectorSubtract(pos, XMVectorScale(forward, moveSpeed));
+        XMStoreFloat3(&cameraPosition, pos);
+    }
+    if (GetAsyncKeyState('A') & 0x8000)
+    {
+        XMVECTOR pos = XMLoadFloat3(&cameraPosition);
+        pos = XMVectorSubtract(pos, XMVectorScale(right, moveSpeed));
+        XMStoreFloat3(&cameraPosition, pos);
+    }
+    if (GetAsyncKeyState('D') & 0x8000)
+    {
+        XMVECTOR pos = XMLoadFloat3(&cameraPosition);
+        pos = XMVectorAdd(pos, XMVectorScale(right, moveSpeed));
+        XMStoreFloat3(&cameraPosition, pos);
+    }
 }
 
 // render
@@ -406,15 +505,29 @@ void DirectXRenderer::Render()
     // clear depth/stencil buffer
     context->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-    // setup a static camera and matrices
-    XMVECTOR Eye = XMVectorSet(0.0f, 0.0f, -3.0f, 0.0f); // camera position
-    XMVECTOR At = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);   // camera target
-    XMVECTOR Up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);   // camera up vector
+    // build view matrix from camera variables
+    XMVECTOR eye = XMLoadFloat3(&cameraPosition);
+    float cosPitch = cosf(cameraPitch);
+    float sinPitch = sinf(cameraPitch);
+    float cosYaw = cosf(cameraYaw);
+    float sinYaw = sinf(cameraYaw);
 
-    // create view and projection matrices
-    XMMATRIX view = XMMatrixLookAtLH(Eye, At, Up);
+    XMVECTOR forward = XMVectorSet(
+        cosPitch * sinYaw,
+        sinPitch,
+        cosPitch * cosYaw,
+        0.0f);
+
+    forward = XMVector3Normalize(forward);
+
+    XMVECTOR target = XMVectorAdd(eye, forward);
+    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+    XMMATRIX view = XMMatrixLookAtLH(eye, target, up);
     XMMATRIX projection = XMMatrixPerspectiveFovLH(XM_PIDIV2, 800.0f / 600.0f, 0.01f, 100.0f);
-    XMMATRIX world = XMMatrixIdentity();
+
+    // bind texture resource and sampler state
+    context->PSSetShaderResources(0, 1, &textureRV);
+    context->PSSetSamplers(0, 1, &samplerState);
 
     // setup pipeline
     UINT stride = sizeof(Vertex);
@@ -478,6 +591,8 @@ void DirectXRenderer::Cleanup()
         solidRasterizerState->Release();
     if (wireframeRasterizerState)
         wireframeRasterizerState->Release();
+    if (samplerState)
+        samplerState->Release();
 
     if (context)
         context->Release();
@@ -492,6 +607,8 @@ void DirectXRenderer::Cleanup()
 // future changes include handling camera movement and input
 LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    DirectXRenderer *pThis = reinterpret_cast<DirectXRenderer *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
     switch (message)
     {
     case WM_CREATE:
@@ -521,6 +638,51 @@ LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam
             {
                 pThis->wireframeMode = !pThis->wireframeMode;
             }
+        }
+        break;
+    }
+
+    case WM_LBUTTONDOWN:
+    {
+        if (pThis)
+        {
+            pThis->leftMouseDown = true;
+            pThis->prevMousePos.x = GET_X_LPARAM(lParam);
+            pThis->prevMousePos.y = GET_Y_LPARAM(lParam);
+        }
+        break;
+    }
+
+    case WM_LBUTTONUP:
+    {
+        if (pThis)
+        {
+            pThis->leftMouseDown = false;
+        }
+        break;
+    }
+
+    case WM_MOUSEMOVE:
+    {
+        if (pThis && pThis->leftMouseDown)
+        {
+            int mouseX = GET_X_LPARAM(lParam);
+            int mouseY = GET_Y_LPARAM(lParam);
+            int deltaX = mouseX - pThis->prevMousePos.x;
+            int deltaY = mouseY - pThis->prevMousePos.y;
+
+            float sensitivity = 0.002f;
+            pThis->cameraYaw += deltaX * sensitivity;
+            pThis->cameraPitch -= deltaY * sensitivity;
+
+            // clamp pitch to prevent flipping
+            if (pThis->cameraPitch > XM_PIDIV2 - 0.1f)
+                pThis->cameraPitch = XM_PIDIV2 - 0.1f;
+            if (pThis->cameraPitch < -XM_PIDIV2 + 0.1f)
+                pThis->cameraPitch = -XM_PIDIV2 + 0.1f;
+
+            pThis->prevMousePos.x = mouseX;
+            pThis->prevMousePos.y = mouseY;
         }
         break;
     }
