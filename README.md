@@ -27,8 +27,7 @@ cmake .. && cmake --build .
 
 ### **Run the Renderer**
 ```sh
-cd build
-DX11App.exe
+.\build\Debug\DirectXRenderer.exe
 ```
 
 ## 🔄 Planned Updates
