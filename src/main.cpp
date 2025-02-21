@@ -274,7 +274,7 @@ bool DirectXRenderer::InitDirectX()
     // texture loading
     // no png set yet
     // save png to assets folder and change the path
-    hr = CreateWICTextureFromFile(device, context, L"assets/image.png", nullptr, &textureRV);
+    hr = CreateWICTextureFromFile(device, context, L"assets/crying_rat.png", nullptr, &textureRV);
     if (FAILED(hr))
         return false;
 
