@@ -87,4 +87,5 @@
 - Fix the texture mapping (in progress).
 - Setup Basic lighting techniques (Phong lighting, point lights).
 - Refactor resource management to use smart pointers (e.g., ComPtr) for COM objects.
+- Add new repo issue about CMake + compilation (unless solved).
 - Other error handling improvements and pipeline state optimizations tbd.
