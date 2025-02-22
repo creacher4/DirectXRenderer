@@ -2,23 +2,27 @@
 // not sure why it's like this but as long as it compiles my code, i'm happy
 #define UNICODE
 
-// other necessary headers
+// other necessary headers for windows, directx, and text rendering
 #include <windows.h>
 #include <windowsx.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include "WICTextureLoader.h"
+#include "SpriteBatch.h"  // for 2d text rendering (directxtk)
+#include "SpriteFont.h"   // for font loading/drawing (directxtk)
+#include "CommonStates.h" // for common render states (directxtk). not used in this code but might be useful in the future
 #include <string>
+#include <memory>
 
 // link libraries
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
-// not sure if using namespace is a good idea but i can always change it later
+// ?? not sure if using namespace is a good idea but i can always change it later
 using namespace DirectX;
 
-// main class
+// main class encapsulates the directx renderer
 class DirectXRenderer
 {
 public:
@@ -34,25 +38,25 @@ private:
     void Render();
     void Cleanup();
 
-    // camera members
+    // camera members and input handling
     XMFLOAT3 cameraPosition;
     float cameraYaw;
     float cameraPitch;
     bool leftMouseDown;
     POINT prevMousePos;
 
-    // directx members
+    // windows and directx members
     HINSTANCE hInstance;
     HWND hWnd;
     D3D_DRIVER_TYPE driverType;
     D3D_FEATURE_LEVEL featureLevel;
 
-    // device and swap chain
+    // directx, device, context and swap chain
     ID3D11Device *device = nullptr;
     ID3D11DeviceContext *context = nullptr;
     IDXGISwapChain *swapChain = nullptr;
 
-    // render target view
+    // render target view for back buffer
     ID3D11RenderTargetView *renderTargetView = nullptr;
 
     // shaders and input layout
@@ -60,29 +64,46 @@ private:
     ID3D11PixelShader *pixelShader = nullptr;
     ID3D11InputLayout *inputLayout = nullptr;
 
-    // buffers
+    // buffers: vertex, index and constant (for wvp matrix)
     ID3D11Buffer *vertexBuffer = nullptr;
     ID3D11Buffer *indexBuffer = nullptr;
     ID3D11Buffer *constantBuffer = nullptr;
 
-    // depth/stencil buffer
+    // depth/stencil buffer for 3d rendering
     ID3D11DepthStencilView *depthStencilView = nullptr;
+    ID3D11DepthStencilState *depthStencilState = nullptr;
 
-    // texture
+    // texture, sampler state, and resource view for texture mapping
     ID3D11SamplerState *samplerState = nullptr;
     ID3D11ShaderResourceView *textureRV = nullptr;
 
-    // create a wireframe rendering mode
+    // rasterizer states for solid and wireframe rendering
     ID3D11RasterizerState *solidRasterizerState = nullptr;
     ID3D11RasterizerState *wireframeRasterizerState = nullptr;
-    bool wireframeMode = false; // toggle wireframe mode
+    bool wireframeMode = false; // *toggle wireframe mode
 
+    // rotation angle for cube animations
     float rotationAngle;
 
+    // high resolution timing variables
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER lastCounter;
+    float deltaTime;
+
+    // fps tracking variables
+    float fpsTimeAccum = 0.0f;
+    int fpsFrameCount = 0;
+    int currentFPS = 0;
+
+    // text rendering using DIRECTXTK
+    std::unique_ptr<SpriteBatch> spriteBatch;
+    std::unique_ptr<SpriteFont> spriteFont;
+
+    // *windows procedure callback
     static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 };
 
-// vertex structure
+// vertex structure for some cube
 struct Vertex
 {
     XMFLOAT3 position;
@@ -90,13 +111,16 @@ struct Vertex
     XMFLOAT2 texCoord;
 };
 
-// constant buffer structure
+// constant buffer structure that holds wvp matrix
+// ** the matrix is transposed before being sent to the shader
 struct ConstantBuffer
 {
     XMMATRIX wvp; // World-View-Projection matrix
 };
 
-// constructor and destructor
+// ---------------------------------------------------------------------------
+// constructor
+// ** initializes member variables and sets default values
 DirectXRenderer::DirectXRenderer(HINSTANCE hInstance)
     : hInstance(hInstance),
       hWnd(nullptr),
@@ -123,22 +147,33 @@ DirectXRenderer::DirectXRenderer(HINSTANCE hInstance)
     prevMousePos.y = 0;
 }
 
+// destructor: calls the cleanup function to release resources
 DirectXRenderer::~DirectXRenderer()
 {
     Cleanup();
 }
 
-// initialize window and directx
+//-----------------------------------------------------------------------------
+// initialize application
+// ** create window and initialize directx
 bool DirectXRenderer::Initialize()
 {
     if (!InitWindow())
         return false;
+
+    // high resolution timer
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&lastCounter);
+    deltaTime = 0.0f;
+
     if (!InitDirectX())
         return false;
     return true;
 }
 
+//-----------------------------------------------------------------------------
 // essentially the main loop
+// ** processes messages and calls update and render functions
 void DirectXRenderer::Run()
 {
     MSG msg = {0};
@@ -157,7 +192,8 @@ void DirectXRenderer::Run()
     }
 }
 
-// initialize window and directx
+//-----------------------------------------------------------------------------
+// ** create and initialize the window
 bool DirectXRenderer::InitWindow()
 {
     WNDCLASSEX wc = {0};
@@ -171,6 +207,8 @@ bool DirectXRenderer::InitWindow()
     if (!RegisterClassEx(&wc))
         return false;
 
+    // adjust window size
+    // 800x600
     RECT rc = {0, 0, 800, 600};
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
     hWnd = CreateWindow(
@@ -182,10 +220,10 @@ bool DirectXRenderer::InitWindow()
         nullptr,
         nullptr,
         hInstance,
-        this // pass 'this' pointer to the window procedure
+        this // pass 'this' pointer so we can access the class members in the window procedure
     );
 
-    // if window creation failed
+    // check window creation
     if (!hWnd)
         return false;
 
@@ -194,9 +232,12 @@ bool DirectXRenderer::InitWindow()
     return true;
 }
 
+//-----------------------------------------------------------------------------
 // initialize directx
+// ** create device, swap chain, render target, depth/stencil, shaders, buffers and text objects
 bool DirectXRenderer::InitDirectX()
 {
+    // setup swap chain desc.
     DXGI_SWAP_CHAIN_DESC sd = {0};
     sd.BufferCount = 1;
     sd.BufferDesc.Width = 800;
@@ -215,35 +256,38 @@ bool DirectXRenderer::InitDirectX()
     if (FAILED(hr))
         return false;
 
+    // setup rasterizer states for solid and wireframe rendering
     D3D11_RASTERIZER_DESC rasterDesc;
     ZeroMemory(&rasterDesc, sizeof(rasterDesc));
     rasterDesc.CullMode = D3D11_CULL_BACK;
     rasterDesc.FrontCounterClockwise = false;
     rasterDesc.DepthClipEnable = true;
 
-    // create solid rasterizer state
+    // solid fill state
     rasterDesc.FillMode = D3D11_FILL_SOLID;
     hr = device->CreateRasterizerState(&rasterDesc, &solidRasterizerState);
     if (FAILED(hr))
         return false;
 
-    // create wireframe rasterizer state
+    // wireframe state
     rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
     hr = device->CreateRasterizerState(&rasterDesc, &wireframeRasterizerState);
     if (FAILED(hr))
         return false;
 
+    // get back buffer from swap chain
     ID3D11Texture2D *pBackBuffer = nullptr;
     hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID *)&pBackBuffer);
     if (FAILED(hr))
         return false;
 
+    // create render target view for back buffer
     hr = device->CreateRenderTargetView(pBackBuffer, nullptr, &renderTargetView);
     pBackBuffer->Release();
     if (FAILED(hr))
         return false;
 
-    // describe depth/stencil buffer
+    // describe and create depth/stencil buffer
     D3D11_TEXTURE2D_DESC depthStencilDesc = {0};
     depthStencilDesc.Width = 800;
     depthStencilDesc.Height = 600;
@@ -262,7 +306,7 @@ bool DirectXRenderer::InitDirectX()
     if (FAILED(hr))
         return false;
 
-    // create depth/stencil view
+    // create a view for the depth/stencil buffer
     hr = device->CreateDepthStencilView(depthStencilBuffer, nullptr, &this->depthStencilView);
     depthStencilBuffer->Release();
     if (FAILED(hr))
@@ -271,13 +315,25 @@ bool DirectXRenderer::InitDirectX()
     // bind render target and depth/stencil view to the output-merger stage
     context->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
 
+    // create a custom depth/stencil state
+    D3D11_DEPTH_STENCIL_DESC dsDesc = {0};
+    dsDesc.DepthEnable = true;
+    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+    dsDesc.StencilEnable = false;
+
+    hr = device->CreateDepthStencilState(&dsDesc, &depthStencilState);
+    if (FAILED(hr))
+        return false;
+
     // texture loading
-    // no png set yet
-    // save png to assets folder and change the path
+    // some random png set at the moment
+    // ** save png to assets folder and change the path
     hr = CreateWICTextureFromFile(device, context, L"assets/crying_rat.png", nullptr, &textureRV);
     if (FAILED(hr))
         return false;
 
+    // create sampler state for texture filtering
     D3D11_SAMPLER_DESC sampDesc;
     ZeroMemory(&sampDesc, sizeof(sampDesc));
     sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -292,7 +348,7 @@ bool DirectXRenderer::InitDirectX()
     if (FAILED(hr))
         return false;
 
-    // set the viewport
+    // set a viewport
     D3D11_VIEWPORT vp;
     vp.Width = (FLOAT)800;
     vp.Height = (FLOAT)600;
@@ -302,10 +358,12 @@ bool DirectXRenderer::InitDirectX()
     vp.TopLeftY = 0;
     context->RSSetViewports(1, &vp);
 
-    // compiles vertex shader from hlsl file. if fail, check for:
-    // incorrect file path
-    // hlsl syntax errors
-    // missing shader model (vs_5_0)
+    // initialize sprite batch and sprite font for text rendering
+    // ** you can use your own spritefont if you want. i created my own arial one using the spritefont tool that came with directxtk
+    spriteBatch = std::make_unique<SpriteBatch>(context);
+    spriteFont = std::make_unique<SpriteFont>(device, L"assets/Arial.spritefont");
+
+    // compiles vertex shader from hlsl file
     ID3DBlob *vsBlob = nullptr;
     hr = D3DCompileFromFile(L"shaders/vertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vsBlob, nullptr);
     if (FAILED(hr))
@@ -318,7 +376,7 @@ bool DirectXRenderer::InitDirectX()
         return false;
     }
 
-    // define input layout
+    // define input layout based on vertex structure
     D3D11_INPUT_ELEMENT_DESC layout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -330,12 +388,10 @@ bool DirectXRenderer::InitDirectX()
     if (FAILED(hr))
         return false;
 
+    // bind input layout to the device context
     context->IASetInputLayout(inputLayout);
 
-    // compiles pixel shader from hlsl file. if fail, check for:
-    // incorrect file path
-    // hlsl syntax errors
-    // missing shader model (ps_5_0)
+    // compiles pixel shader from hlsl file
     ID3DBlob *psBlob = nullptr;
     hr = D3DCompileFromFile(L"shaders/pixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", 0, 0, &psBlob, nullptr);
     if (FAILED(hr))
@@ -346,7 +402,7 @@ bool DirectXRenderer::InitDirectX()
     if (FAILED(hr))
         return false;
 
-    // define vertices (counter-clockwise order)
+    // define cube geometry (vertices) with positions, colours and texture coordinates
     Vertex cubeVertices[] =
         {
             //              position                  colour      texture coordinates
@@ -361,7 +417,7 @@ bool DirectXRenderer::InitDirectX()
             {XMFLOAT3(-0.5f, -0.5f, 0.5f), XMFLOAT4(0, 0, 0, 1), XMFLOAT2(1.0f, 1.0f)} // 7: back-bottom-left
         };
 
-    // define indices
+    // define cube indices (36 indices for 12 triangles)
     UINT cubeIndices[] =
         {
             // front face
@@ -415,7 +471,7 @@ bool DirectXRenderer::InitDirectX()
     if (FAILED(hr))
         return false;
 
-    // create constant buffer
+    // create constant buffer for wvp matrix
     D3D11_BUFFER_DESC cbd = {};
     cbd.Usage = D3D11_USAGE_DEFAULT;
     cbd.ByteWidth = sizeof(ConstantBuffer);
@@ -429,23 +485,45 @@ bool DirectXRenderer::InitDirectX()
     return true;
 }
 
-// update
+//-----------------------------------------------------------------------------
+// update scene
+// ** calculate delta time, update fps, adjust cube rotation, and process camera movement
 void DirectXRenderer::Update()
 {
-    // transformations
-    // cube rotation
-    rotationAngle += 0.0005f; // arbitrary value, can be adjusted
+    // compute time elapsed since last frame
+    LARGE_INTEGER currentCounter;
+    QueryPerformanceCounter(&currentCounter);
 
-    // other logic can be added here
+    LONGLONG elapsed = currentCounter.QuadPart - lastCounter.QuadPart;
+    lastCounter = currentCounter;
 
-    // camera movement
-    float moveSpeed = 0.002f;
+    // convert to seconds
+    deltaTime = static_cast<float>(elapsed) / static_cast<float>(frequency.QuadPart);
+
+    // update fps counter
+    fpsTimeAccum += deltaTime;
+    fpsFrameCount++;
+
+    if (fpsTimeAccum > 1.0f)
+    {
+        currentFPS = fpsFrameCount;
+        fpsTimeAccum -= 1.0f; // reset time accumulator
+        fpsFrameCount = 0;    // reset frame count
+    }
+
+    // update cube rotation angle
+    float rotationSpeed = 1.0f; // ?? consider making this configurable
+    rotationAngle += rotationSpeed * deltaTime;
+
+    // compute camera movement
+    float moveSpeed = 2.0f; // ?? consider making this configurable
     float cosPitch = cosf(cameraPitch);
     float sinPitch = sinf(cameraPitch);
     float cosYaw = cosf(cameraYaw);
     float sinYaw = sinf(cameraYaw);
 
-    // define move forward
+    // calculate forward vector from yaw and pitch
+    // ** essentially uses spherical coordinates to calculate forward vector
     XMVECTOR forward = XMVectorSet(
         cosPitch * sinYaw,
         sinPitch,
@@ -453,42 +531,46 @@ void DirectXRenderer::Update()
         0.0f);
     forward = XMVector3Normalize(forward);
 
-    // define move right by defining the cross product of forward and up
+    // calculate right vector
+    // ** cross product of up and forward vectors, is then normalized
     XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     XMVECTOR right = XMVector3Cross(up, forward);
     right = XMVector3Normalize(right);
 
-    // handle input
+    // handle kb iput for camera movement
     if (GetAsyncKeyState('W') & 0x8000)
     {
         XMVECTOR pos = XMLoadFloat3(&cameraPosition);
-        pos = XMVectorAdd(pos, XMVectorScale(forward, moveSpeed));
+        pos = XMVectorAdd(pos, XMVectorScale(forward, moveSpeed * deltaTime));
         XMStoreFloat3(&cameraPosition, pos);
     }
     if (GetAsyncKeyState('S') & 0x8000)
     {
         XMVECTOR pos = XMLoadFloat3(&cameraPosition);
-        pos = XMVectorSubtract(pos, XMVectorScale(forward, moveSpeed));
+        pos = XMVectorSubtract(pos, XMVectorScale(forward, moveSpeed * deltaTime));
         XMStoreFloat3(&cameraPosition, pos);
     }
     if (GetAsyncKeyState('A') & 0x8000)
     {
         XMVECTOR pos = XMLoadFloat3(&cameraPosition);
-        pos = XMVectorSubtract(pos, XMVectorScale(right, moveSpeed));
+        pos = XMVectorSubtract(pos, XMVectorScale(right, moveSpeed * deltaTime));
         XMStoreFloat3(&cameraPosition, pos);
     }
     if (GetAsyncKeyState('D') & 0x8000)
     {
         XMVECTOR pos = XMLoadFloat3(&cameraPosition);
-        pos = XMVectorAdd(pos, XMVectorScale(right, moveSpeed));
+        pos = XMVectorAdd(pos, XMVectorScale(right, moveSpeed * deltaTime));
         XMStoreFloat3(&cameraPosition, pos);
     }
 }
 
-// render
+//-----------------------------------------------------------------------------
+// render scene
+// ** reapply pipeline, clear buffers, set view/projection matrices, draw cubes, and overlay text
 void DirectXRenderer::Render()
 {
-    // set rasterizer state
+    // set rasterizer state based on whether wireframe mode is enabled
+    // ** need to make sure this is the first thing that happens in the render function
     if (wireframeMode)
     {
         context->RSSetState(wireframeRasterizerState);
@@ -498,11 +580,16 @@ void DirectXRenderer::Render()
         context->RSSetState(solidRasterizerState);
     }
 
-    // clear colour buffer
+    // reapply pipeline to reset state changes made by spritebatch
+    // ?? not sure if this is the best way to do it but messes up geometry/transformations otherwise
+    // ?? seems like reapplying the pipeline fixes it?
+    context->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
+    context->OMSetDepthStencilState(depthStencilState, 0);
+    context->IASetInputLayout(inputLayout);
+
+    // clear render target and depth/stencil buffer
     float clearColor[4] = {0.0f, 0.2f, 0.4f, 1.0f}; // (RGBA) some blueish colour
     context->ClearRenderTargetView(renderTargetView, clearColor);
-
-    // clear depth/stencil buffer
     context->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
     // build view matrix from camera variables
@@ -523,25 +610,27 @@ void DirectXRenderer::Render()
     XMVECTOR target = XMVectorAdd(eye, forward);
     XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
     XMMATRIX view = XMMatrixLookAtLH(eye, target, up);
+    // setup projection matrix (fov, aspect ratio, near plane, far plane)
     XMMATRIX projection = XMMatrixPerspectiveFovLH(XM_PIDIV2, 800.0f / 600.0f, 0.01f, 100.0f);
 
-    // bind texture resource and sampler state
+    // bind texture resource and sampler state for the pixel shader
     context->PSSetShaderResources(0, 1, &textureRV);
     context->PSSetSamplers(0, 1, &samplerState);
 
-    // setup pipeline
+    // setup vertex and index buffers and configure primitive topology
     UINT stride = sizeof(Vertex);
     UINT offset = 0;
     context->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
     context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    // bind shaders
     context->VSSetShader(vertexShader, nullptr, 0);
     context->PSSetShader(pixelShader, nullptr, 0);
 
     // combine into the wvp matrix and transpose it for the shaders
     ConstantBuffer cb;
 
-    // create animations for two cubes
+    // ** create animations for two cubes
     // cube 1 - rotates around the y-axis
     XMMATRIX world1 = XMMatrixRotationY(rotationAngle) * XMMatrixTranslation(-1.5f, 0.0f, 0.0f);
     cb.wvp = XMMatrixTranspose(world1 * view * projection);
@@ -556,12 +645,27 @@ void DirectXRenderer::Render()
     context->VSSetConstantBuffers(0, 1, &constantBuffer);
     context->DrawIndexed(36, 0, 0);
 
+    // render text using spritebatch and spritefont
+    // ** drawing text with spritebatch can change device state
+    // ** need to reapply pipeline to reset state changes
+    spriteBatch->Begin();
+
+    // fps and camera position
+    wchar_t hudText[256];
+    swprintf_s(hudText, L"FPS: %d\nCam: (%.2f, %.2f, %.2f)",
+               currentFPS, cameraPosition.x, cameraPosition.y, cameraPosition.z);
+
+    spriteFont->DrawString(spriteBatch.get(), hudText, XMFLOAT2(10, 10), Colors::White);
+    spriteBatch->End();
+
+    // present the final frame
     swapChain->Present(0, 0);
 }
 
+//-----------------------------------------------------------------------------
 // cleanup resources before closing since im using raw pointers
-// i know i should be using smart pointers but i couldn't get them to work for the life of me
-// problem for future me
+// ** i know i should be using smart pointers but i couldn't get them to work for the life of me
+// TODO: use ComPtr for COM objects, and smart pointers for other resources. that way, can get rid of this cleanup function
 void DirectXRenderer::Cleanup()
 {
     // clear gpu state before releasing resources
@@ -593,6 +697,10 @@ void DirectXRenderer::Cleanup()
         wireframeRasterizerState->Release();
     if (samplerState)
         samplerState->Release();
+    if (depthStencilState)
+        depthStencilState->Release();
+    if (textureRV)
+        textureRV->Release();
 
     if (context)
         context->Release();
@@ -600,20 +708,22 @@ void DirectXRenderer::Cleanup()
         device->Release();
 }
 
-// window procedure to handle OS messages
-// processes events
-// right now, it's handling a quit message
-// handles rasterizer state
-// future changes include handling camera movement and input
+//-----------------------------------------------------------------------------
+// window procedure
+// ** handles messages such as input and window events
+// ** right now, it's handling a quit message
+// ** also handles rasterizer state toggling, and camera movement
 LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    // retrive renderer instance pointer from window user data
     DirectXRenderer *pThis = reinterpret_cast<DirectXRenderer *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 
     switch (message)
     {
     case WM_CREATE:
     {
-        // store the 'this' pointer in the window user data since wireframemode = !wireframemode; can't access it directly
+        // on creation, store the 'this' pointer in the window user data
+        // ** all of this because wireframemode = !wireframemode; can't access it directly
         LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
         DirectXRenderer *pThis = reinterpret_cast<DirectXRenderer *>(pCreateStruct->lpCreateParams);
 
@@ -632,8 +742,8 @@ LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam
 
         if (pThis)
         {
-            // r for rasterizer
-            // toggles wireframe mode
+            // ** 'R' for rasterizer
+            // ** toggles wireframe mode when pressed
             if (wParam == 'R')
             {
                 pThis->wireframeMode = !pThis->wireframeMode;
@@ -671,11 +781,11 @@ LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam
             int deltaX = mouseX - pThis->prevMousePos.x;
             int deltaY = mouseY - pThis->prevMousePos.y;
 
-            float sensitivity = 0.002f;
+            float sensitivity = 0.002f; // ?? consider making this configurable
             pThis->cameraYaw += deltaX * sensitivity;
             pThis->cameraPitch -= deltaY * sensitivity;
 
-            // clamp pitch to prevent flipping
+            // ** clamp pitch to prevent flipping
             if (pThis->cameraPitch > XM_PIDIV2 - 0.1f)
                 pThis->cameraPitch = XM_PIDIV2 - 0.1f;
             if (pThis->cameraPitch < -XM_PIDIV2 + 0.1f)
@@ -693,7 +803,9 @@ LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam
     return 0;
 }
 
+//-----------------------------------------------------------------------------
 // entry point
+// ** creates an instance of the DirectXRenderer class and runs the application
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
 {
     DirectXRenderer renderer(hInstance);

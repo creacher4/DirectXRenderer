@@ -66,14 +66,25 @@
 - Integrated DirectX Tool Kit (DXTK) using vcpkg.
 - Created a CMakeLists.txt file for easier rebuild.
 - Created a `.gitignore` to exclude unnecessary files.
-- Implemented texture mapping via DirectXTK (work in progress).
+- Implemented texture mapping via the DirectXTK.
 - Updated README.md and removed troubleshooting section.
-- Tried to fix a bug with CMake that caused configuration to fail
+- Tried to fix a bug with CMake that caused configuration to fail.
 
 ---
+
+## 22nd February, 2025
+
+- Added high resolution timer to keep animations fps independant
+- Added dynamic HUD text (FPS + camera position) with SpriteBatch and SpriteFont.
+  - Reapplied pipeline states since SpriteBatch was changing them.
+- Updated inline comments.
+  - Comments are now more thorough and informative.
+- Added a custom depth-stencil state.
 
 ## By 25th February, 2025
 
 - Improve project documentation (in progress).
 - Fix the texture mapping (in progress).
 - Setup Basic lighting techniques (Phong lighting, point lights).
+- Refactor resource management to use smart pointers (e.g., ComPtr) for COM objects.
+- Other error handling improvements and pipeline state optimizations tbd.
