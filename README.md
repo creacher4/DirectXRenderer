@@ -17,6 +17,7 @@ A DirectX 11-based 3D graphics renderer built in C++.
 - Windows SDK
 - Git
 - CMake
+- DirectX Tool Kit
 
 ### **Clone & Build**
 ```sh
