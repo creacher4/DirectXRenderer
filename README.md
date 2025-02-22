@@ -7,6 +7,7 @@ A DirectX 11-based 3D graphics renderer built in C++.
 - Depth buffering & transformations
 - Dynamic camera movement (WASD + mouse look)
 - Texture mapping (using DirectX Tool Kit)
+- HUD elmeents (FPS counter + camera position)
 - Wireframe/solid rendering toggle
 
 ## 🚀 Setup & Build
