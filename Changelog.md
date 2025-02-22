@@ -74,7 +74,7 @@
 
 ## 22nd February, 2025
 
-- Added high resolution timer to keep animations fps independant
+- Added high resolution timer to keep animations fps independant.
 - Added dynamic HUD text (FPS + camera position) with SpriteBatch and SpriteFont.
   - Reapplied pipeline states since SpriteBatch was changing them.
 - Updated inline comments.
