@@ -102,7 +102,7 @@
 - Fixed a bug where the texture map wouldn't render properly on the cubes.
   - The `png` file now renders properly on each cube face.
 - Removed most, if not all, comments and renamed variables for better readability.
-- Removed the use of global namespaces.
+- Removed the use of global namespaces, introduced them locally when I felt like they were needed (personal preference).
 
 ---
 

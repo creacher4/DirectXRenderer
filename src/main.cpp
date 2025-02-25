@@ -131,7 +131,7 @@ Direct3DRenderer::Direct3DRenderer(HINSTANCE instanceHandle)
 
 Direct3DRenderer::~Direct3DRenderer()
 {
-    // COM objects are automatically released.
+    // COM objects are automatically released
 }
 
 bool Direct3DRenderer::Initialize()
@@ -483,7 +483,6 @@ void Direct3DRenderer::UpdateCubeRotation()
 
 void Direct3DRenderer::UpdateCameraMovement()
 {
-    // Local using for DirectX improves readability in this function.
     using namespace DirectX;
 
     const float moveSpeed = 2.0f;
