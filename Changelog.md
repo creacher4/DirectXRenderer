@@ -1,4 +1,4 @@
-## 12th February, 2025
+## 12th February, 2025 [v0.1]
 
 - Installed DirectX SDK and set up the development environment.
 - Followed Direct3D documentation and tutorials to establish the rendering pipeline.
@@ -15,7 +15,7 @@
 
 ---
 
-## 14th February, 2025
+## 14th February, 2025 [v0.2]
 
 - Restarted the rendering system using a structured tutorial approach.
 - Achieved the following rendering milestones:
@@ -43,7 +43,7 @@
 
 ---
 
-## 19th February, 2025
+## 19th February, 2025 [v0.3]
 
 - Reverted to a simpler rendering approach, keeping everything in `main`:
   - Restored basic triangle and rectangle rendering.
@@ -81,11 +81,40 @@
   - Comments are now more thorough and informative.
 - Added a custom depth-stencil state.
 
-## By 25th February, 2025
+---
 
-- Improve project documentation (in progress).
-- Fix the texture mapping (in progress).
+## 25th February, 2025 [v0.4]
+
+- Refactored `main` into well-defined helper functions.
+  - Separated responsibilities for window creation, device initialization, rendering, and input handling.
+  - Broke up the monolithic structure into distinct initialization, update, and render stages.
+- Added full window resizing support via an `OnResize` function.
+  - The render target view and depth/stencil view are now recreated on resize.
+  - Viewport and projection matrix are updated dynamically to match the new window size.
+  - Window dimensions are displayed on the HUD (alongside FPS and camera position).
+- Fixed a bug where after resizing the window, the depth buffer would fail.
+  - Added a `ResetRenderStates()` helper function to reapply all pipeline states after a resize.
+  - This ensures proper usage of the depth buffer so that near and far objects occlude each other correctly.
+- Replaced raw COM pointers with `ComPtr` for automatic resource management.
+- Heavily improved overall code organization and readability.
+  - Enhanced error checking and maintainability.
+- Added a simple directional lighting system.
+- Fixed a bug where the texture map wouldn't render properly on the cubes.
+  - The `png` file now renders properly on each cube face.
+- Removed most, if not all, comments and renamed variables for better readability.
+- Removed the use of global namespaces.
+
+---
+
+## [Unreleased]
+
+- Modularize the code further by separating functionality into additional classes.
+  - Dedicated window management class.
+  - Camera class to encapsulate all camera-related logic.
+  - More support for future features
+- With the addition of more classes, and a CMake bugfix, I can separate `main` into multiple other source and header files alike.
+
+## By March, 2025
+
 - Setup Basic lighting techniques (Phong lighting, point lights).
-- Refactor resource management to use smart pointers (e.g., ComPtr) for COM objects.
 - Add new repo issue about CMake + compilation (unless solved).
-- Other error handling improvements and pipeline state optimizations to be determined.

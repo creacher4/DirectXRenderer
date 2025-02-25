@@ -1,183 +1,739 @@
-// define UNICODE to ensure the application uses wide-character strings
-// not sure why it's like this but as long as it compiles my code, i'm happy
 #define UNICODE
 
-// other necessary headers for windows, directx, and text rendering
 #include <windows.h>
 #include <windowsx.h>
+#include <wrl/client.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
-#include "WICTextureLoader.h"
-#include "SpriteBatch.h"  // for 2d text rendering (directxtk)
-#include "SpriteFont.h"   // for font loading/drawing (directxtk)
-#include "CommonStates.h" // for common render states (directxtk). not used in this code but might be useful in the future
-#include <string>
+#include <DirectXTK/WICTextureLoader.h>
+#include <DirectXTK/SpriteBatch.h>
+#include <DirectXTK/SpriteFont.h>
+#include <chrono>
 #include <memory>
+#include <stdexcept>
+#include <sstream>
 
-// link libraries
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 
-// ?? not sure if using namespace is a good idea but i can always change it later
-using namespace DirectX;
+constexpr UINT WINDOW_WIDTH = 800;
+constexpr UINT WINDOW_HEIGHT = 600;
 
-// main class encapsulates the directx renderer
-class DirectXRenderer
+struct Vertex
+{
+    DirectX::XMFLOAT3 position;
+    DirectX::XMFLOAT3 normal;
+    DirectX::XMFLOAT4 color;
+    DirectX::XMFLOAT2 texCoord;
+};
+
+struct MatrixBuffer
+{
+    DirectX::XMMATRIX world;
+    DirectX::XMMATRIX wvp;
+};
+
+struct LightBuffer
+{
+    DirectX::XMFLOAT4 ambientColor;
+    DirectX::XMFLOAT4 diffuseColor;
+    DirectX::XMFLOAT3 lightDirection;
+    float padding;
+};
+
+struct CameraState
+{
+    DirectX::XMFLOAT3 position = {0.0f, 0.0f, -3.0f};
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+    bool isMouseDown = false;
+    POINT prevPosition = {0, 0};
+};
+
+class Direct3DRenderer
 {
 public:
-    DirectXRenderer(HINSTANCE hInstance);
-    ~DirectXRenderer();
+    Direct3DRenderer(HINSTANCE instanceHandle);
+    ~Direct3DRenderer();
+
     bool Initialize();
     void Run();
 
 private:
-    bool InitWindow();
-    bool InitDirectX();
+    bool InitializeWindow();
+    bool InitializeDirect3D();
+    bool CreateD3DDeviceAndSwapChain();
+    bool InitializeRasterizerStates();
+    bool InitializeRenderTargetAndDepthBuffer();
+    bool InitializeTextureAndSampler();
+    bool ConfigureViewport();
+    bool InitializeTextRenderer();
+    bool InitializeShadersAndInputLayout();
+    bool InitializeGeometryBuffers();
+    bool InitializeLightingBuffer();
+
     void Update();
     void Render();
-    void Cleanup();
+    void UpdateTiming();
+    void UpdateCubeRotation();
+    void UpdateCameraMovement();
+    void ClearBuffers();
+    void ConfigureCameraMatrices(DirectX::XMMATRIX &view, DirectX::XMMATRIX &projection);
+    void DrawCube(const DirectX::XMMATRIX &world, const DirectX::XMMATRIX &view, const DirectX::XMMATRIX &projection);
+    void RenderHUD();
+    void ResetRenderStates();
+    bool OnResize(UINT newWidth, UINT newHeight);
 
-    // camera members and input handling
-    XMFLOAT3 cameraPosition;
-    float cameraYaw;
-    float cameraPitch;
-    bool leftMouseDown;
-    POINT prevMousePos;
+    static LRESULT CALLBACK WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam);
 
-    // windows and directx members
-    HINSTANCE hInstance;
-    HWND hWnd;
-    D3D_DRIVER_TYPE driverType;
-    D3D_FEATURE_LEVEL featureLevel;
+    HINSTANCE instanceHandle;
+    HWND windowHandle;
+    UINT windowWidth = WINDOW_WIDTH;
+    UINT windowHeight = WINDOW_HEIGHT;
+    bool isWireframeEnabled = false;
 
-    // directx, device, context and swap chain
-    ID3D11Device *device = nullptr;
-    ID3D11DeviceContext *context = nullptr;
-    IDXGISwapChain *swapChain = nullptr;
+    CameraState camera;
 
-    // render target view for back buffer
-    ID3D11RenderTargetView *renderTargetView = nullptr;
+    Microsoft::WRL::ComPtr<ID3D11Device> d3dDevice;
+    Microsoft::WRL::ComPtr<ID3D11DeviceContext> d3dContext;
+    Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthStencilView;
+    Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depthStencilState;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
+    Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> indexBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> matrixConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> lightConstantBuffer;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> textureResourceView;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> solidRasterizerState;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState> wireframeRasterizerState;
 
-    // shaders and input layout
-    ID3D11VertexShader *vertexShader = nullptr;
-    ID3D11PixelShader *pixelShader = nullptr;
-    ID3D11InputLayout *inputLayout = nullptr;
-
-    // buffers: vertex, index and constant (for wvp matrix)
-    ID3D11Buffer *vertexBuffer = nullptr;
-    ID3D11Buffer *indexBuffer = nullptr;
-    ID3D11Buffer *constantBuffer = nullptr;
-
-    // depth/stencil buffer for 3d rendering
-    ID3D11DepthStencilView *depthStencilView = nullptr;
-    ID3D11DepthStencilState *depthStencilState = nullptr;
-
-    // texture, sampler state, and resource view for texture mapping
-    ID3D11SamplerState *samplerState = nullptr;
-    ID3D11ShaderResourceView *textureRV = nullptr;
-
-    // rasterizer states for solid and wireframe rendering
-    ID3D11RasterizerState *solidRasterizerState = nullptr;
-    ID3D11RasterizerState *wireframeRasterizerState = nullptr;
-    bool wireframeMode = false; // *toggle wireframe mode
-
-    // rotation angle for cube animations
-    float rotationAngle;
-
-    // high resolution timing variables
-    LARGE_INTEGER frequency;
-    LARGE_INTEGER lastCounter;
-    float deltaTime;
-
-    // fps tracking variables
-    float fpsTimeAccum = 0.0f;
+    float cubeRotationAngle = 0.0f;
+    std::chrono::high_resolution_clock::time_point lastTime;
+    float deltaTime = 0.0f;
+    float fpsTimeAccumulator = 0.0f;
     int fpsFrameCount = 0;
     int currentFPS = 0;
 
-    // text rendering using DIRECTXTK
-    std::unique_ptr<SpriteBatch> spriteBatch;
-    std::unique_ptr<SpriteFont> spriteFont;
-
-    // *windows procedure callback
-    static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+    std::unique_ptr<DirectX::SpriteBatch> spriteBatch;
+    std::unique_ptr<DirectX::SpriteFont> spriteFont;
 };
 
-// vertex structure for some cube
-struct Vertex
+Direct3DRenderer::Direct3DRenderer(HINSTANCE instanceHandle)
+    : instanceHandle(instanceHandle), windowHandle(nullptr)
 {
-    XMFLOAT3 position;
-    XMFLOAT4 color;
-    XMFLOAT2 texCoord;
-};
-
-// constant buffer structure that holds wvp matrix
-// ** the matrix is transposed before being sent to the shader
-struct ConstantBuffer
-{
-    XMMATRIX wvp; // World-View-Projection matrix
-};
-
-// ---------------------------------------------------------------------------
-// constructor
-// ** initializes member variables and sets default values
-DirectXRenderer::DirectXRenderer(HINSTANCE hInstance)
-    : hInstance(hInstance),
-      hWnd(nullptr),
-      driverType(D3D_DRIVER_TYPE_HARDWARE),
-      featureLevel(D3D_FEATURE_LEVEL_11_0),
-      device(nullptr),
-      context(nullptr),
-      swapChain(nullptr),
-      renderTargetView(nullptr),
-      vertexShader(nullptr),
-      pixelShader(nullptr),
-      inputLayout(nullptr),
-      vertexBuffer(nullptr),
-      indexBuffer(nullptr),
-      constantBuffer(nullptr),
-      depthStencilView(nullptr),
-      rotationAngle(0.0f),
-      cameraPosition(0.0f, 0.0f, -3.0f),
-      cameraYaw(0.0f),
-      cameraPitch(0.0f),
-      leftMouseDown(false)
-{
-    prevMousePos.x = 0;
-    prevMousePos.y = 0;
 }
 
-// destructor: calls the cleanup function to release resources
-DirectXRenderer::~DirectXRenderer()
+Direct3DRenderer::~Direct3DRenderer()
 {
-    Cleanup();
+    // COM objects are automatically released.
 }
 
-//-----------------------------------------------------------------------------
-// initialize application
-// ** create window and initialize directx
-bool DirectXRenderer::Initialize()
+bool Direct3DRenderer::Initialize()
 {
-    if (!InitWindow())
+    if (!InitializeWindow())
         return false;
-
-    // high resolution timer
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&lastCounter);
-    deltaTime = 0.0f;
-
-    if (!InitDirectX())
+    lastTime = std::chrono::high_resolution_clock::now();
+    if (!InitializeDirect3D())
         return false;
     return true;
 }
 
-//-----------------------------------------------------------------------------
-// essentially the main loop
-// ** processes messages and calls update and render functions
-void DirectXRenderer::Run()
+bool Direct3DRenderer::InitializeWindow()
 {
-    MSG msg = {0};
-    while (WM_QUIT != msg.message)
+    WNDCLASSEX wc = {};
+    wc.cbSize = sizeof(WNDCLASSEX);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    wc.lpfnWndProc = Direct3DRenderer::WindowProc;
+    wc.hInstance = instanceHandle;
+    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wc.lpszClassName = L"Direct3DRendererWindowClass";
+    if (!RegisterClassEx(&wc))
+        return false;
+
+    RECT rc = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+    windowHandle = CreateWindow(L"Direct3DRendererWindowClass", L"Direct3D 11 Renderer",
+                                WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
+                                rc.right - rc.left, rc.bottom - rc.top,
+                                nullptr, nullptr, instanceHandle, this);
+    if (!windowHandle)
+        return false;
+
+    ShowWindow(windowHandle, SW_SHOW);
+    return true;
+}
+
+bool Direct3DRenderer::InitializeDirect3D()
+{
+    if (!CreateD3DDeviceAndSwapChain())
+        return false;
+    if (!InitializeRasterizerStates())
+        return false;
+    if (!InitializeRenderTargetAndDepthBuffer())
+        return false;
+    if (!InitializeTextureAndSampler())
+        return false;
+    if (!ConfigureViewport())
+        return false;
+    if (!InitializeTextRenderer())
+        return false;
+    if (!InitializeShadersAndInputLayout())
+        return false;
+    if (!InitializeGeometryBuffers())
+        return false;
+    if (!InitializeLightingBuffer())
+        return false;
+    return true;
+}
+
+bool Direct3DRenderer::CreateD3DDeviceAndSwapChain()
+{
+    DXGI_SWAP_CHAIN_DESC sd = {};
+    sd.BufferCount = 1;
+    sd.BufferDesc.Width = WINDOW_WIDTH;
+    sd.BufferDesc.Height = WINDOW_HEIGHT;
+    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    sd.BufferDesc.RefreshRate.Numerator = 60;
+    sd.BufferDesc.RefreshRate.Denominator = 1;
+    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    sd.OutputWindow = windowHandle;
+    sd.SampleDesc.Count = 1;
+    sd.Windowed = TRUE;
+
+    HRESULT hr = D3D11CreateDeviceAndSwapChain(
+        nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0,
+        D3D11_SDK_VERSION, &sd, swapChain.GetAddressOf(),
+        d3dDevice.GetAddressOf(), nullptr, d3dContext.GetAddressOf());
+    return SUCCEEDED(hr);
+}
+
+bool Direct3DRenderer::InitializeRasterizerStates()
+{
+    D3D11_RASTERIZER_DESC rd = {};
+    rd.CullMode = D3D11_CULL_BACK;
+    rd.FrontCounterClockwise = false;
+    rd.DepthClipEnable = TRUE;
+    rd.FillMode = D3D11_FILL_SOLID;
+    HRESULT hr = d3dDevice->CreateRasterizerState(&rd, solidRasterizerState.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    rd.FillMode = D3D11_FILL_WIREFRAME;
+    hr = d3dDevice->CreateRasterizerState(&rd, wireframeRasterizerState.GetAddressOf());
+    return SUCCEEDED(hr);
+}
+
+bool Direct3DRenderer::InitializeRenderTargetAndDepthBuffer()
+{
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+    HRESULT hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
+                                      reinterpret_cast<void **>(backBuffer.GetAddressOf()));
+    if (FAILED(hr))
+        return false;
+
+    hr = d3dDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    D3D11_TEXTURE2D_DESC depthDesc = {};
+    depthDesc.Width = WINDOW_WIDTH;
+    depthDesc.Height = WINDOW_HEIGHT;
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> depthBuffer;
+    hr = d3dDevice->CreateTexture2D(&depthDesc, nullptr, depthBuffer.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    hr = d3dDevice->CreateDepthStencilView(depthBuffer.Get(), nullptr, depthStencilView.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    d3dContext->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());
+
+    D3D11_DEPTH_STENCIL_DESC dsDesc = {};
+    dsDesc.DepthEnable = TRUE;
+    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+    dsDesc.StencilEnable = FALSE;
+    hr = d3dDevice->CreateDepthStencilState(&dsDesc, depthStencilState.GetAddressOf());
+    return SUCCEEDED(hr);
+}
+
+bool Direct3DRenderer::InitializeTextureAndSampler()
+{
+    HRESULT hr = DirectX::CreateWICTextureFromFile(d3dDevice.Get(), d3dContext.Get(), L"assets/crying_rat.png", nullptr, textureResourceView.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    D3D11_SAMPLER_DESC sampDesc = {};
+    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sampDesc.MinLOD = 0;
+    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    hr = d3dDevice->CreateSamplerState(&sampDesc, samplerState.GetAddressOf());
+    return SUCCEEDED(hr);
+}
+
+bool Direct3DRenderer::ConfigureViewport()
+{
+    D3D11_VIEWPORT vp = {};
+    vp.Width = static_cast<FLOAT>(WINDOW_WIDTH);
+    vp.Height = static_cast<FLOAT>(WINDOW_HEIGHT);
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = 0;
+    vp.TopLeftY = 0;
+    d3dContext->RSSetViewports(1, &vp);
+    return true;
+}
+
+bool Direct3DRenderer::InitializeTextRenderer()
+{
+    try
+    {
+        spriteBatch = std::make_unique<DirectX::SpriteBatch>(d3dContext.Get());
+        spriteFont = std::make_unique<DirectX::SpriteFont>(d3dDevice.Get(), L"assets/Arial.spritefont");
+    }
+    catch (...)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool Direct3DRenderer::InitializeShadersAndInputLayout()
+{
+    Microsoft::WRL::ComPtr<ID3DBlob> vsBlob;
+    HRESULT hr = D3DCompileFromFile(L"shaders/vertexShader.hlsl", nullptr, nullptr,
+                                    "main", "vs_5_0", 0, 0, vsBlob.GetAddressOf(), nullptr);
+    if (FAILED(hr))
+        return false;
+
+    hr = d3dDevice->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
+                                       nullptr, vertexShader.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    D3D11_INPUT_ELEMENT_DESC layoutDesc[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 40, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+    hr = d3dDevice->CreateInputLayout(layoutDesc, ARRAYSIZE(layoutDesc),
+                                      vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(),
+                                      inputLayout.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+    d3dContext->IASetInputLayout(inputLayout.Get());
+
+    Microsoft::WRL::ComPtr<ID3DBlob> psBlob;
+    hr = D3DCompileFromFile(L"shaders/pixelShader.hlsl", nullptr, nullptr,
+                            "main", "ps_5_0", 0, 0, psBlob.GetAddressOf(), nullptr);
+    if (FAILED(hr))
+        return false;
+    hr = d3dDevice->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(),
+                                      nullptr, pixelShader.GetAddressOf());
+    return SUCCEEDED(hr);
+}
+
+bool Direct3DRenderer::InitializeGeometryBuffers()
+{
+    Vertex vertices[] = {
+        // front face (normal: 0, 0, -1)
+        {DirectX::XMFLOAT3(-0.5f, 0.5f, -0.5f), DirectX::XMFLOAT3(0, 0, -1), DirectX::XMFLOAT4(1, 0, 0, 1), DirectX::XMFLOAT2(0, 0)},
+        {DirectX::XMFLOAT3(0.5f, 0.5f, -0.5f), DirectX::XMFLOAT3(0, 0, -1), DirectX::XMFLOAT4(0, 1, 0, 1), DirectX::XMFLOAT2(1, 0)},
+        {DirectX::XMFLOAT3(0.5f, -0.5f, -0.5f), DirectX::XMFLOAT3(0, 0, -1), DirectX::XMFLOAT4(0, 0, 1, 1), DirectX::XMFLOAT2(1, 1)},
+        {DirectX::XMFLOAT3(-0.5f, -0.5f, -0.5f), DirectX::XMFLOAT3(0, 0, -1), DirectX::XMFLOAT4(1, 1, 1, 1), DirectX::XMFLOAT2(0, 1)},
+
+        // back face (normal: 0, 0, 1)
+        {DirectX::XMFLOAT3(0.5f, 0.5f, 0.5f), DirectX::XMFLOAT3(0, 0, 1), DirectX::XMFLOAT4(1, 1, 0, 1), DirectX::XMFLOAT2(0, 0)},
+        {DirectX::XMFLOAT3(-0.5f, 0.5f, 0.5f), DirectX::XMFLOAT3(0, 0, 1), DirectX::XMFLOAT4(0, 1, 1, 1), DirectX::XMFLOAT2(1, 0)},
+        {DirectX::XMFLOAT3(-0.5f, -0.5f, 0.5f), DirectX::XMFLOAT3(0, 0, 1), DirectX::XMFLOAT4(1, 0, 1, 1), DirectX::XMFLOAT2(1, 1)},
+        {DirectX::XMFLOAT3(0.5f, -0.5f, 0.5f), DirectX::XMFLOAT3(0, 0, 1), DirectX::XMFLOAT4(0, 0, 0, 1), DirectX::XMFLOAT2(0, 1)},
+
+        // left face (normal: -1, 0, 0)
+        {DirectX::XMFLOAT3(-0.5f, 0.5f, 0.5f), DirectX::XMFLOAT3(-1, 0, 0), DirectX::XMFLOAT4(1, 1, 0, 1), DirectX::XMFLOAT2(0, 0)},
+        {DirectX::XMFLOAT3(-0.5f, 0.5f, -0.5f), DirectX::XMFLOAT3(-1, 0, 0), DirectX::XMFLOAT4(1, 0, 0, 1), DirectX::XMFLOAT2(1, 0)},
+        {DirectX::XMFLOAT3(-0.5f, -0.5f, -0.5f), DirectX::XMFLOAT3(-1, 0, 0), DirectX::XMFLOAT4(1, 1, 1, 1), DirectX::XMFLOAT2(1, 1)},
+        {DirectX::XMFLOAT3(-0.5f, -0.5f, 0.5f), DirectX::XMFLOAT3(-1, 0, 0), DirectX::XMFLOAT4(0, 0, 1, 1), DirectX::XMFLOAT2(0, 1)},
+
+        // right face (normal: 1, 0, 0)
+        {DirectX::XMFLOAT3(0.5f, 0.5f, -0.5f), DirectX::XMFLOAT3(1, 0, 0), DirectX::XMFLOAT4(0, 1, 0, 1), DirectX::XMFLOAT2(0, 0)},
+        {DirectX::XMFLOAT3(0.5f, 0.5f, 0.5f), DirectX::XMFLOAT3(1, 0, 0), DirectX::XMFLOAT4(0, 1, 1, 1), DirectX::XMFLOAT2(1, 0)},
+        {DirectX::XMFLOAT3(0.5f, -0.5f, 0.5f), DirectX::XMFLOAT3(1, 0, 0), DirectX::XMFLOAT4(1, 0, 1, 1), DirectX::XMFLOAT2(1, 1)},
+        {DirectX::XMFLOAT3(0.5f, -0.5f, -0.5f), DirectX::XMFLOAT3(1, 0, 0), DirectX::XMFLOAT4(0, 0, 1, 1), DirectX::XMFLOAT2(0, 1)},
+
+        // top face (normal: 0, 1, 0)
+        {DirectX::XMFLOAT3(-0.5f, 0.5f, 0.5f), DirectX::XMFLOAT3(0, 1, 0), DirectX::XMFLOAT4(1, 1, 0, 1), DirectX::XMFLOAT2(0, 0)},
+        {DirectX::XMFLOAT3(0.5f, 0.5f, 0.5f), DirectX::XMFLOAT3(0, 1, 0), DirectX::XMFLOAT4(0, 1, 1, 1), DirectX::XMFLOAT2(1, 0)},
+        {DirectX::XMFLOAT3(0.5f, 0.5f, -0.5f), DirectX::XMFLOAT3(0, 1, 0), DirectX::XMFLOAT4(0, 1, 0, 1), DirectX::XMFLOAT2(1, 1)},
+        {DirectX::XMFLOAT3(-0.5f, 0.5f, -0.5f), DirectX::XMFLOAT3(0, 1, 0), DirectX::XMFLOAT4(1, 0, 0, 1), DirectX::XMFLOAT2(0, 1)},
+
+        // bottom face (normal: 0, -1, 0)
+        {DirectX::XMFLOAT3(-0.5f, -0.5f, -0.5f), DirectX::XMFLOAT3(0, -1, 0), DirectX::XMFLOAT4(1, 1, 1, 1), DirectX::XMFLOAT2(0, 0)},
+        {DirectX::XMFLOAT3(0.5f, -0.5f, -0.5f), DirectX::XMFLOAT3(0, -1, 0), DirectX::XMFLOAT4(0, 0, 1, 1), DirectX::XMFLOAT2(1, 0)},
+        {DirectX::XMFLOAT3(0.5f, -0.5f, 0.5f), DirectX::XMFLOAT3(0, -1, 0), DirectX::XMFLOAT4(1, 0, 1, 1), DirectX::XMFLOAT2(1, 1)},
+        {DirectX::XMFLOAT3(-0.5f, -0.5f, 0.5f), DirectX::XMFLOAT3(0, -1, 0), DirectX::XMFLOAT4(0, 0, 0, 1), DirectX::XMFLOAT2(0, 1)},
+    };
+
+    UINT indices[] = {
+        0, 1, 2, 0, 2, 3,       // front face
+        4, 5, 6, 4, 6, 7,       // back face
+        8, 9, 10, 8, 10, 11,    // left face
+        12, 13, 14, 12, 14, 15, // right face
+        16, 17, 18, 16, 18, 19, // top face
+        20, 21, 22, 20, 22, 23  // bottom face
+    };
+
+    D3D11_BUFFER_DESC vbDesc = {};
+    vbDesc.Usage = D3D11_USAGE_DEFAULT;
+    vbDesc.ByteWidth = sizeof(vertices);
+    vbDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    D3D11_SUBRESOURCE_DATA vbData = {};
+    vbData.pSysMem = vertices;
+    HRESULT hr = d3dDevice->CreateBuffer(&vbDesc, &vbData, vertexBuffer.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    D3D11_BUFFER_DESC ibDesc = {};
+    ibDesc.Usage = D3D11_USAGE_DEFAULT;
+    ibDesc.ByteWidth = sizeof(indices);
+    ibDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+    D3D11_SUBRESOURCE_DATA ibData = {};
+    ibData.pSysMem = indices;
+    hr = d3dDevice->CreateBuffer(&ibDesc, &ibData, indexBuffer.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    D3D11_BUFFER_DESC cbDesc = {};
+    cbDesc.Usage = D3D11_USAGE_DEFAULT;
+    cbDesc.ByteWidth = sizeof(MatrixBuffer);
+    cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    hr = d3dDevice->CreateBuffer(&cbDesc, nullptr, matrixConstantBuffer.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    return true;
+}
+
+bool Direct3DRenderer::InitializeLightingBuffer()
+{
+    LightBuffer lb;
+    lb.ambientColor = DirectX::XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
+    lb.diffuseColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    lb.lightDirection = DirectX::XMFLOAT3(0.577f, -0.577f, 0.577f);
+    lb.padding = 0.0f;
+
+    D3D11_BUFFER_DESC lbDesc = {};
+    lbDesc.Usage = D3D11_USAGE_DEFAULT;
+    lbDesc.ByteWidth = sizeof(LightBuffer);
+    lbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    lbDesc.CPUAccessFlags = 0;
+    D3D11_SUBRESOURCE_DATA lbData = {};
+    lbData.pSysMem = &lb;
+    HRESULT hr = d3dDevice->CreateBuffer(&lbDesc, &lbData, lightConstantBuffer.GetAddressOf());
+    return SUCCEEDED(hr);
+}
+
+void Direct3DRenderer::Update()
+{
+    UpdateTiming();
+    UpdateCubeRotation();
+    UpdateCameraMovement();
+}
+
+void Direct3DRenderer::UpdateTiming()
+{
+    auto now = std::chrono::high_resolution_clock::now();
+    deltaTime = std::chrono::duration<float>(now - lastTime).count();
+    lastTime = now;
+
+    fpsTimeAccumulator += deltaTime;
+    fpsFrameCount++;
+    if (fpsTimeAccumulator > 1.0f)
+    {
+        currentFPS = fpsFrameCount;
+        fpsTimeAccumulator = 0.0f;
+        fpsFrameCount = 0;
+    }
+}
+
+void Direct3DRenderer::UpdateCubeRotation()
+{
+    const float rotationSpeed = 1.0f;
+    cubeRotationAngle += rotationSpeed * deltaTime;
+}
+
+void Direct3DRenderer::UpdateCameraMovement()
+{
+    // Local using for DirectX improves readability in this function.
+    using namespace DirectX;
+
+    const float moveSpeed = 2.0f;
+    float cosPitch = cosf(camera.pitch);
+    float sinPitch = sinf(camera.pitch);
+    float cosYaw = cosf(camera.yaw);
+    float sinYaw = sinf(camera.yaw);
+
+    XMVECTOR forward = XMVectorSet(cosPitch * sinYaw, sinPitch, cosPitch * cosYaw, 0.0f);
+    forward = XMVector3Normalize(forward);
+    XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+    XMVECTOR right = XMVector3Cross(up, forward);
+    right = XMVector3Normalize(right);
+
+    if (GetAsyncKeyState('W') & 0x8000)
+    {
+        XMVECTOR pos = XMLoadFloat3(&camera.position);
+        pos = XMVectorAdd(pos, XMVectorScale(forward, moveSpeed * deltaTime));
+        XMStoreFloat3(&camera.position, pos);
+    }
+    if (GetAsyncKeyState('S') & 0x8000)
+    {
+        XMVECTOR pos = XMLoadFloat3(&camera.position);
+        pos = XMVectorSubtract(pos, XMVectorScale(forward, moveSpeed * deltaTime));
+        XMStoreFloat3(&camera.position, pos);
+    }
+    if (GetAsyncKeyState('A') & 0x8000)
+    {
+        XMVECTOR pos = XMLoadFloat3(&camera.position);
+        pos = XMVectorSubtract(pos, XMVectorScale(right, moveSpeed * deltaTime));
+        XMStoreFloat3(&camera.position, pos);
+    }
+    if (GetAsyncKeyState('D') & 0x8000)
+    {
+        XMVECTOR pos = XMLoadFloat3(&camera.position);
+        pos = XMVectorAdd(pos, XMVectorScale(right, moveSpeed * deltaTime));
+        XMStoreFloat3(&camera.position, pos);
+    }
+}
+
+void Direct3DRenderer::Render()
+{
+    d3dContext->RSSetState(isWireframeEnabled ? wireframeRasterizerState.Get() : solidRasterizerState.Get());
+    ResetRenderStates();
+    ClearBuffers();
+
+    DirectX::XMMATRIX view, projection;
+    ConfigureCameraMatrices(view, projection);
+
+    d3dContext->PSSetShaderResources(0, 1, textureResourceView.GetAddressOf());
+    d3dContext->PSSetSamplers(0, 1, samplerState.GetAddressOf());
+    d3dContext->PSSetConstantBuffers(1, 1, lightConstantBuffer.GetAddressOf());
+
+    UINT stride = sizeof(Vertex);
+    UINT offset = 0;
+    d3dContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
+    d3dContext->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+    d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    d3dContext->VSSetShader(vertexShader.Get(), nullptr, 0);
+    d3dContext->PSSetShader(pixelShader.Get(), nullptr, 0);
+
+    DirectX::XMMATRIX world1 = DirectX::XMMatrixRotationY(cubeRotationAngle) * DirectX::XMMatrixTranslation(-1.5f, 0.0f, 0.0f);
+    DrawCube(world1, view, projection);
+
+    DirectX::XMMATRIX world2 = DirectX::XMMatrixRotationX(cubeRotationAngle) * DirectX::XMMatrixTranslation(1.5f, 0.0f, 0.0f);
+    DrawCube(world2, view, projection);
+
+    RenderHUD();
+    swapChain->Present(0, 0);
+}
+
+void Direct3DRenderer::ClearBuffers()
+{
+    float clearColor[4] = {0.0f, 0.2f, 0.4f, 1.0f};
+    d3dContext->ClearRenderTargetView(renderTargetView.Get(), clearColor);
+    d3dContext->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+}
+
+void Direct3DRenderer::ConfigureCameraMatrices(DirectX::XMMATRIX &view, DirectX::XMMATRIX &projection)
+{
+    using namespace DirectX;
+
+    XMVECTOR eye = XMLoadFloat3(&camera.position);
+    float cosPitch = cosf(camera.pitch);
+    float sinPitch = sinf(camera.pitch);
+    float cosYaw = cosf(camera.yaw);
+    float sinYaw = sinf(camera.yaw);
+
+    XMVECTOR forward = XMVectorSet(cosPitch * sinYaw, sinPitch, cosPitch * cosYaw, 0.0f);
+    forward = XMVector3Normalize(forward);
+    XMVECTOR target = XMVectorAdd(eye, forward);
+    XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+    view = XMMatrixLookAtLH(eye, target, up);
+
+    float aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
+    projection = XMMatrixPerspectiveFovLH(XM_PIDIV2, aspectRatio, 0.01f, 100.0f);
+}
+
+void Direct3DRenderer::DrawCube(const DirectX::XMMATRIX &world, const DirectX::XMMATRIX &view, const DirectX::XMMATRIX &projection)
+{
+    MatrixBuffer mb;
+    mb.world = DirectX::XMMatrixTranspose(world);
+    mb.wvp = DirectX::XMMatrixTranspose(world * view * projection);
+    d3dContext->UpdateSubresource(matrixConstantBuffer.Get(), 0, nullptr, &mb, 0, 0);
+    d3dContext->VSSetConstantBuffers(0, 1, matrixConstantBuffer.GetAddressOf());
+    d3dContext->DrawIndexed(36, 0, 0);
+}
+
+void Direct3DRenderer::RenderHUD()
+{
+    spriteBatch->Begin();
+    wchar_t hudText[256];
+    swprintf_s(hudText, L"FPS: %d\nCamera: (%.2f, %.2f, %.2f)\nWindow: %d x %d",
+               currentFPS, camera.position.x, camera.position.y, camera.position.z,
+               windowWidth, windowHeight);
+    spriteFont->DrawString(spriteBatch.get(), hudText, DirectX::XMFLOAT2(10, 10), DirectX::Colors::White);
+    spriteBatch->End();
+}
+
+void Direct3DRenderer::ResetRenderStates()
+{
+    d3dContext->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());
+    d3dContext->OMSetDepthStencilState(depthStencilState.Get(), 0);
+    d3dContext->IASetInputLayout(inputLayout.Get());
+    d3dContext->VSSetShader(vertexShader.Get(), nullptr, 0);
+    d3dContext->PSSetShader(pixelShader.Get(), nullptr, 0);
+    d3dContext->PSSetShaderResources(0, 1, textureResourceView.GetAddressOf());
+    d3dContext->PSSetSamplers(0, 1, samplerState.GetAddressOf());
+    d3dContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    d3dContext->RSSetState(isWireframeEnabled ? wireframeRasterizerState.Get() : solidRasterizerState.Get());
+}
+
+bool Direct3DRenderer::OnResize(UINT newWidth, UINT newHeight)
+{
+    windowWidth = newWidth;
+    windowHeight = newHeight;
+
+    renderTargetView.Reset();
+    depthStencilView.Reset();
+
+    HRESULT hr = swapChain->ResizeBuffers(0, newWidth, newHeight, DXGI_FORMAT_UNKNOWN, 0);
+    if (FAILED(hr))
+        return false;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer;
+    hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D),
+                              reinterpret_cast<void **>(backBuffer.GetAddressOf()));
+    if (FAILED(hr))
+        return false;
+
+    hr = d3dDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    D3D11_TEXTURE2D_DESC depthDesc = {};
+    depthDesc.Width = newWidth;
+    depthDesc.Height = newHeight;
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> depthBuffer;
+    hr = d3dDevice->CreateTexture2D(&depthDesc, nullptr, depthBuffer.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    hr = d3dDevice->CreateDepthStencilView(depthBuffer.Get(), nullptr, depthStencilView.GetAddressOf());
+    if (FAILED(hr))
+        return false;
+
+    ResetRenderStates();
+
+    D3D11_VIEWPORT vp = {};
+    vp.Width = static_cast<FLOAT>(newWidth);
+    vp.Height = static_cast<FLOAT>(newHeight);
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = 0;
+    vp.TopLeftY = 0;
+    d3dContext->RSSetViewports(1, &vp);
+    return true;
+}
+
+LRESULT CALLBACK Direct3DRenderer::WindowProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    Direct3DRenderer *renderer = reinterpret_cast<Direct3DRenderer *>(GetWindowLongPtr(windowHandle, GWLP_USERDATA));
+    switch (message)
+    {
+    case WM_CREATE:
+    {
+        LPCREATESTRUCT createStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+        Direct3DRenderer *rendererPtr = reinterpret_cast<Direct3DRenderer *>(createStruct->lpCreateParams);
+        SetWindowLongPtr(windowHandle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(rendererPtr));
+        return 0;
+    }
+    case WM_SIZE:
+        if (renderer && renderer->swapChain)
+            renderer->OnResize(LOWORD(lParam), HIWORD(lParam));
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    case WM_KEYDOWN:
+        if (renderer && wParam == 'R')
+            renderer->isWireframeEnabled = !renderer->isWireframeEnabled;
+        break;
+    case WM_LBUTTONDOWN:
+        if (renderer)
+        {
+            renderer->camera.isMouseDown = true;
+            renderer->camera.prevPosition.x = GET_X_LPARAM(lParam);
+            renderer->camera.prevPosition.y = GET_Y_LPARAM(lParam);
+        }
+        break;
+    case WM_LBUTTONUP:
+        if (renderer)
+            renderer->camera.isMouseDown = false;
+        break;
+    case WM_MOUSEMOVE:
+        if (renderer && renderer->camera.isMouseDown)
+        {
+            int mouseX = GET_X_LPARAM(lParam);
+            int mouseY = GET_Y_LPARAM(lParam);
+            int deltaX = mouseX - renderer->camera.prevPosition.x;
+            int deltaY = mouseY - renderer->camera.prevPosition.y;
+            float sensitivity = 0.002f;
+            renderer->camera.yaw += deltaX * sensitivity;
+            renderer->camera.pitch -= deltaY * sensitivity;
+            if (renderer->camera.pitch > DirectX::XM_PIDIV2 - 0.1f)
+                renderer->camera.pitch = DirectX::XM_PIDIV2 - 0.1f;
+            if (renderer->camera.pitch < -DirectX::XM_PIDIV2 + 0.1f)
+                renderer->camera.pitch = -DirectX::XM_PIDIV2 + 0.1f;
+            renderer->camera.prevPosition.x = mouseX;
+            renderer->camera.prevPosition.y = mouseY;
+        }
+        break;
+    default:
+        return DefWindowProc(windowHandle, message, wParam, lParam);
+    }
+    return 0;
+}
+
+void Direct3DRenderer::Run()
+{
+    MSG msg = {};
+    while (msg.message != WM_QUIT)
     {
         if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
@@ -192,631 +748,14 @@ void DirectXRenderer::Run()
     }
 }
 
-//-----------------------------------------------------------------------------
-// ** create and initialize the window
-bool DirectXRenderer::InitWindow()
+int WINAPI wWinMain(HINSTANCE instanceHandle, HINSTANCE, LPWSTR, int)
 {
-    WNDCLASSEX wc = {0};
-    wc.cbSize = sizeof(WNDCLASSEX);
-    wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = WndProc;
-    wc.hInstance = hInstance;
-    wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.lpszClassName = L"DirectXWindowClass";
-
-    if (!RegisterClassEx(&wc))
-        return false;
-
-    // adjust window size
-    // 800x600
-    RECT rc = {0, 0, 800, 600};
-    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-    hWnd = CreateWindow(
-        L"DirectXWindowClass",
-        L"DirectX Renderer",
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        rc.right - rc.left, rc.bottom - rc.top,
-        nullptr,
-        nullptr,
-        hInstance,
-        this // pass 'this' pointer so we can access the class members in the window procedure
-    );
-
-    // check window creation
-    if (!hWnd)
-        return false;
-
-    ShowWindow(hWnd, SW_SHOW);
-
-    return true;
-}
-
-//-----------------------------------------------------------------------------
-// initialize directx
-// ** create device, swap chain, render target, depth/stencil, shaders, buffers and text objects
-bool DirectXRenderer::InitDirectX()
-{
-    // setup swap chain desc.
-    DXGI_SWAP_CHAIN_DESC sd = {0};
-    sd.BufferCount = 1;
-    sd.BufferDesc.Width = 800;
-    sd.BufferDesc.Height = 600;
-    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // standard 32-bit colour format
-    sd.BufferDesc.RefreshRate.Numerator = 60;
-    sd.BufferDesc.RefreshRate.Denominator = 1;
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = hWnd;
-    sd.SampleDesc.Count = 1;
-    sd.SampleDesc.Quality = 0;
-    sd.Windowed = TRUE;
-
-    HRESULT hr = D3D11CreateDeviceAndSwapChain(nullptr, driverType, nullptr, 0, nullptr, 0,
-                                               D3D11_SDK_VERSION, &sd, &swapChain, &device, &featureLevel, &context);
-    if (FAILED(hr))
-        return false;
-
-    // setup rasterizer states for solid and wireframe rendering
-    D3D11_RASTERIZER_DESC rasterDesc;
-    ZeroMemory(&rasterDesc, sizeof(rasterDesc));
-    rasterDesc.CullMode = D3D11_CULL_BACK;
-    rasterDesc.FrontCounterClockwise = false;
-    rasterDesc.DepthClipEnable = true;
-
-    // solid fill state
-    rasterDesc.FillMode = D3D11_FILL_SOLID;
-    hr = device->CreateRasterizerState(&rasterDesc, &solidRasterizerState);
-    if (FAILED(hr))
-        return false;
-
-    // wireframe state
-    rasterDesc.FillMode = D3D11_FILL_WIREFRAME;
-    hr = device->CreateRasterizerState(&rasterDesc, &wireframeRasterizerState);
-    if (FAILED(hr))
-        return false;
-
-    // get back buffer from swap chain
-    ID3D11Texture2D *pBackBuffer = nullptr;
-    hr = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID *)&pBackBuffer);
-    if (FAILED(hr))
-        return false;
-
-    // create render target view for back buffer
-    hr = device->CreateRenderTargetView(pBackBuffer, nullptr, &renderTargetView);
-    pBackBuffer->Release();
-    if (FAILED(hr))
-        return false;
-
-    // describe and create depth/stencil buffer
-    D3D11_TEXTURE2D_DESC depthStencilDesc = {0};
-    depthStencilDesc.Width = 800;
-    depthStencilDesc.Height = 600;
-    depthStencilDesc.MipLevels = 1;
-    depthStencilDesc.ArraySize = 1;
-    depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    depthStencilDesc.SampleDesc.Count = 1;
-    depthStencilDesc.SampleDesc.Quality = 0;
-    depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
-    depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-    depthStencilDesc.CPUAccessFlags = 0;
-    depthStencilDesc.MiscFlags = 0;
-
-    ID3D11Texture2D *depthStencilBuffer = nullptr;
-    hr = device->CreateTexture2D(&depthStencilDesc, nullptr, &depthStencilBuffer);
-    if (FAILED(hr))
-        return false;
-
-    // create a view for the depth/stencil buffer
-    hr = device->CreateDepthStencilView(depthStencilBuffer, nullptr, &this->depthStencilView);
-    depthStencilBuffer->Release();
-    if (FAILED(hr))
-        return false;
-
-    // bind render target and depth/stencil view to the output-merger stage
-    context->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
-
-    // create a custom depth/stencil state
-    D3D11_DEPTH_STENCIL_DESC dsDesc = {0};
-    dsDesc.DepthEnable = true;
-    dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-    dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-    dsDesc.StencilEnable = false;
-
-    hr = device->CreateDepthStencilState(&dsDesc, &depthStencilState);
-    if (FAILED(hr))
-        return false;
-
-    // texture loading
-    // some random png set at the moment
-    // ** save png to assets folder and change the path
-    hr = CreateWICTextureFromFile(device, context, L"assets/crying_rat.png", nullptr, &textureRV);
-    if (FAILED(hr))
-        return false;
-
-    // create sampler state for texture filtering
-    D3D11_SAMPLER_DESC sampDesc;
-    ZeroMemory(&sampDesc, sizeof(sampDesc));
-    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    sampDesc.MinLOD = 0;
-    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-
-    hr = device->CreateSamplerState(&sampDesc, &samplerState);
-    if (FAILED(hr))
-        return false;
-
-    // set a viewport
-    D3D11_VIEWPORT vp;
-    vp.Width = (FLOAT)800;
-    vp.Height = (FLOAT)600;
-    vp.MinDepth = 0.0f;
-    vp.MaxDepth = 1.0f;
-    vp.TopLeftX = 0;
-    vp.TopLeftY = 0;
-    context->RSSetViewports(1, &vp);
-
-    // initialize sprite batch and sprite font for text rendering
-    // ** you can use your own spritefont if you want. i created my own arial one using the spritefont tool that came with directxtk
-    spriteBatch = std::make_unique<SpriteBatch>(context);
-    spriteFont = std::make_unique<SpriteFont>(device, L"assets/Arial.spritefont");
-
-    // compiles vertex shader from hlsl file
-    ID3DBlob *vsBlob = nullptr;
-    hr = D3DCompileFromFile(L"shaders/vertexShader.hlsl", nullptr, nullptr, "main", "vs_5_0", 0, 0, &vsBlob, nullptr);
-    if (FAILED(hr))
-        return false;
-
-    hr = device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &vertexShader);
-    if (FAILED(hr))
-    {
-        vsBlob->Release();
-        return false;
-    }
-
-    // define input layout based on vertex structure
-    D3D11_INPUT_ELEMENT_DESC layout[] = {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0}};
-    UINT numElements = ARRAYSIZE(layout);
-
-    hr = device->CreateInputLayout(layout, numElements, vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
-    vsBlob->Release();
-    if (FAILED(hr))
-        return false;
-
-    // bind input layout to the device context
-    context->IASetInputLayout(inputLayout);
-
-    // compiles pixel shader from hlsl file
-    ID3DBlob *psBlob = nullptr;
-    hr = D3DCompileFromFile(L"shaders/pixelShader.hlsl", nullptr, nullptr, "main", "ps_5_0", 0, 0, &psBlob, nullptr);
-    if (FAILED(hr))
-        return false;
-
-    hr = device->CreatePixelShader(psBlob->GetBufferPointer(), psBlob->GetBufferSize(), nullptr, &pixelShader);
-    psBlob->Release();
-    if (FAILED(hr))
-        return false;
-
-    // define cube geometry (vertices) with positions, colours and texture coordinates
-    Vertex cubeVertices[] =
-        {
-            //              position                  colour      texture coordinates
-            {XMFLOAT3(-0.5f, 0.5f, -0.5f), XMFLOAT4(1, 0, 0, 1), XMFLOAT2(0.0f, 0.0f)},  // 0: front-top-left
-            {XMFLOAT3(0.5f, 0.5f, -0.5f), XMFLOAT4(0, 1, 0, 1), XMFLOAT2(1.0f, 0.0f)},   // 1: front-top-right
-            {XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(0, 0, 1, 1), XMFLOAT2(1.0f, 1.0f)},  // 2: front-bottom-right
-            {XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1, 1, 1, 1), XMFLOAT2(0.0f, 1.0f)}, // 3: front-bottom-left
-
-            {XMFLOAT3(-0.5f, 0.5f, 0.5f), XMFLOAT4(1, 1, 0, 1), XMFLOAT2(1.0f, 0.0f)}, // 4: back-top-left
-            {XMFLOAT3(0.5f, 0.5f, 0.5f), XMFLOAT4(0, 1, 1, 1), XMFLOAT2(0.0f, 0.0f)},  // 5: back-top-right
-            {XMFLOAT3(0.5f, -0.5f, 0.5f), XMFLOAT4(1, 0, 1, 1), XMFLOAT2(0.0f, 1.0f)}, // 6: back-bottom-right
-            {XMFLOAT3(-0.5f, -0.5f, 0.5f), XMFLOAT4(0, 0, 0, 1), XMFLOAT2(1.0f, 1.0f)} // 7: back-bottom-left
-        };
-
-    // define cube indices (36 indices for 12 triangles)
-    UINT cubeIndices[] =
-        {
-            // front face
-            0, 1, 2,
-            0, 2, 3,
-
-            // back face
-            5, 4, 7,
-            5, 7, 6,
-
-            // left face
-            4, 0, 3,
-            4, 3, 7,
-
-            // right face
-            1, 5, 6,
-            1, 6, 2,
-
-            // top face
-            4, 5, 1,
-            4, 1, 0,
-
-            // bottom face
-            3, 2, 6,
-            3, 6, 7};
-
-    // create vertex buffer
-    D3D11_BUFFER_DESC bd = {0};
-    bd.Usage = D3D11_USAGE_DEFAULT;
-    bd.ByteWidth = sizeof(cubeVertices);
-    bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    bd.CPUAccessFlags = 0;
-
-    D3D11_SUBRESOURCE_DATA initData = {0};
-    initData.pSysMem = cubeVertices;
-
-    hr = device->CreateBuffer(&bd, &initData, &vertexBuffer);
-    if (FAILED(hr))
-        return false;
-
-    // create index buffer
-    D3D11_BUFFER_DESC ibd = {0};
-    ibd.Usage = D3D11_USAGE_DEFAULT;
-    ibd.ByteWidth = sizeof(cubeIndices);
-    ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-
-    D3D11_SUBRESOURCE_DATA iinitData = {};
-    iinitData.pSysMem = cubeIndices;
-
-    hr = device->CreateBuffer(&ibd, &iinitData, &indexBuffer);
-    if (FAILED(hr))
-        return false;
-
-    // create constant buffer for wvp matrix
-    D3D11_BUFFER_DESC cbd = {};
-    cbd.Usage = D3D11_USAGE_DEFAULT;
-    cbd.ByteWidth = sizeof(ConstantBuffer);
-    cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    cbd.CPUAccessFlags = 0;
-
-    hr = device->CreateBuffer(&cbd, nullptr, &constantBuffer);
-    if (FAILED(hr))
-        return false;
-
-    return true;
-}
-
-//-----------------------------------------------------------------------------
-// update scene
-// ** calculate delta time, update fps, adjust cube rotation, and process camera movement
-void DirectXRenderer::Update()
-{
-    // compute time elapsed since last frame
-    LARGE_INTEGER currentCounter;
-    QueryPerformanceCounter(&currentCounter);
-
-    LONGLONG elapsed = currentCounter.QuadPart - lastCounter.QuadPart;
-    lastCounter = currentCounter;
-
-    // convert to seconds
-    deltaTime = static_cast<float>(elapsed) / static_cast<float>(frequency.QuadPart);
-
-    // update fps counter
-    fpsTimeAccum += deltaTime;
-    fpsFrameCount++;
-
-    if (fpsTimeAccum > 1.0f)
-    {
-        currentFPS = fpsFrameCount;
-        fpsTimeAccum -= 1.0f; // reset time accumulator
-        fpsFrameCount = 0;    // reset frame count
-    }
-
-    // update cube rotation angle
-    float rotationSpeed = 1.0f; // ?? consider making this configurable
-    rotationAngle += rotationSpeed * deltaTime;
-
-    // compute camera movement
-    float moveSpeed = 2.0f; // ?? consider making this configurable
-    float cosPitch = cosf(cameraPitch);
-    float sinPitch = sinf(cameraPitch);
-    float cosYaw = cosf(cameraYaw);
-    float sinYaw = sinf(cameraYaw);
-
-    // calculate forward vector from yaw and pitch
-    // ** essentially uses spherical coordinates to calculate forward vector
-    XMVECTOR forward = XMVectorSet(
-        cosPitch * sinYaw,
-        sinPitch,
-        cosPitch * cosYaw,
-        0.0f);
-    forward = XMVector3Normalize(forward);
-
-    // calculate right vector
-    // ** cross product of up and forward vectors, is then normalized
-    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    XMVECTOR right = XMVector3Cross(up, forward);
-    right = XMVector3Normalize(right);
-
-    // handle kb iput for camera movement
-    if (GetAsyncKeyState('W') & 0x8000)
-    {
-        XMVECTOR pos = XMLoadFloat3(&cameraPosition);
-        pos = XMVectorAdd(pos, XMVectorScale(forward, moveSpeed * deltaTime));
-        XMStoreFloat3(&cameraPosition, pos);
-    }
-    if (GetAsyncKeyState('S') & 0x8000)
-    {
-        XMVECTOR pos = XMLoadFloat3(&cameraPosition);
-        pos = XMVectorSubtract(pos, XMVectorScale(forward, moveSpeed * deltaTime));
-        XMStoreFloat3(&cameraPosition, pos);
-    }
-    if (GetAsyncKeyState('A') & 0x8000)
-    {
-        XMVECTOR pos = XMLoadFloat3(&cameraPosition);
-        pos = XMVectorSubtract(pos, XMVectorScale(right, moveSpeed * deltaTime));
-        XMStoreFloat3(&cameraPosition, pos);
-    }
-    if (GetAsyncKeyState('D') & 0x8000)
-    {
-        XMVECTOR pos = XMLoadFloat3(&cameraPosition);
-        pos = XMVectorAdd(pos, XMVectorScale(right, moveSpeed * deltaTime));
-        XMStoreFloat3(&cameraPosition, pos);
-    }
-}
-
-//-----------------------------------------------------------------------------
-// render scene
-// ** reapply pipeline, clear buffers, set view/projection matrices, draw cubes, and overlay text
-void DirectXRenderer::Render()
-{
-    // set rasterizer state based on whether wireframe mode is enabled
-    // ** need to make sure this is the first thing that happens in the render function
-    if (wireframeMode)
-    {
-        context->RSSetState(wireframeRasterizerState);
-    }
-    else
-    {
-        context->RSSetState(solidRasterizerState);
-    }
-
-    // reapply pipeline to reset state changes made by spritebatch
-    // ?? not sure if this is the best way to do it but messes up geometry/transformations otherwise
-    // ?? seems like reapplying the pipeline fixes it?
-    context->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
-    context->OMSetDepthStencilState(depthStencilState, 0);
-    context->IASetInputLayout(inputLayout);
-
-    // clear render target and depth/stencil buffer
-    float clearColor[4] = {0.0f, 0.2f, 0.4f, 1.0f}; // (RGBA) some blueish colour
-    context->ClearRenderTargetView(renderTargetView, clearColor);
-    context->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-    // build view matrix from camera variables
-    XMVECTOR eye = XMLoadFloat3(&cameraPosition);
-    float cosPitch = cosf(cameraPitch);
-    float sinPitch = sinf(cameraPitch);
-    float cosYaw = cosf(cameraYaw);
-    float sinYaw = sinf(cameraYaw);
-
-    XMVECTOR forward = XMVectorSet(
-        cosPitch * sinYaw,
-        sinPitch,
-        cosPitch * cosYaw,
-        0.0f);
-
-    forward = XMVector3Normalize(forward);
-
-    XMVECTOR target = XMVectorAdd(eye, forward);
-    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    XMMATRIX view = XMMatrixLookAtLH(eye, target, up);
-    // setup projection matrix (fov, aspect ratio, near plane, far plane)
-    XMMATRIX projection = XMMatrixPerspectiveFovLH(XM_PIDIV2, 800.0f / 600.0f, 0.01f, 100.0f);
-
-    // bind texture resource and sampler state for the pixel shader
-    context->PSSetShaderResources(0, 1, &textureRV);
-    context->PSSetSamplers(0, 1, &samplerState);
-
-    // setup vertex and index buffers and configure primitive topology
-    UINT stride = sizeof(Vertex);
-    UINT offset = 0;
-    context->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
-    context->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    // bind shaders
-    context->VSSetShader(vertexShader, nullptr, 0);
-    context->PSSetShader(pixelShader, nullptr, 0);
-
-    // combine into the wvp matrix and transpose it for the shaders
-    ConstantBuffer cb;
-
-    // ** create animations for two cubes
-    // cube 1 - rotates around the y-axis
-    XMMATRIX world1 = XMMatrixRotationY(rotationAngle) * XMMatrixTranslation(-1.5f, 0.0f, 0.0f);
-    cb.wvp = XMMatrixTranspose(world1 * view * projection);
-    context->UpdateSubresource(constantBuffer, 0, nullptr, &cb, 0, 0);
-    context->VSSetConstantBuffers(0, 1, &constantBuffer);
-    context->DrawIndexed(36, 0, 0);
-
-    // cube 2 - rotates around the x-axis
-    XMMATRIX world2 = XMMatrixRotationX(rotationAngle) * XMMatrixTranslation(1.5f, 0.0f, 0.0f);
-    cb.wvp = XMMatrixTranspose(world2 * view * projection);
-    context->UpdateSubresource(constantBuffer, 0, nullptr, &cb, 0, 0);
-    context->VSSetConstantBuffers(0, 1, &constantBuffer);
-    context->DrawIndexed(36, 0, 0);
-
-    // render text using spritebatch and spritefont
-    // ** drawing text with spritebatch can change device state
-    // ** need to reapply pipeline to reset state changes
-    spriteBatch->Begin();
-
-    // fps and camera position
-    wchar_t hudText[256];
-    swprintf_s(hudText, L"FPS: %d\nCam: (%.2f, %.2f, %.2f)",
-               currentFPS, cameraPosition.x, cameraPosition.y, cameraPosition.z);
-
-    spriteFont->DrawString(spriteBatch.get(), hudText, XMFLOAT2(10, 10), Colors::White);
-    spriteBatch->End();
-
-    // present the final frame
-    swapChain->Present(0, 0);
-}
-
-//-----------------------------------------------------------------------------
-// cleanup resources before closing since im using raw pointers
-// ** i know i should be using smart pointers but i couldn't get them to work for the life of me
-// TODO: use ComPtr for COM objects, and smart pointers for other resources. that way, can get rid of this cleanup function
-void DirectXRenderer::Cleanup()
-{
-    // clear gpu state before releasing resources
-    if (context)
-        context->ClearState();
-
-    // release resources
-    if (depthStencilView)
-        depthStencilView->Release();
-    if (vertexBuffer)
-        vertexBuffer->Release();
-    if (inputLayout)
-        inputLayout->Release();
-    if (vertexShader)
-        vertexShader->Release();
-    if (pixelShader)
-        pixelShader->Release();
-    if (renderTargetView)
-        renderTargetView->Release();
-    if (swapChain)
-        swapChain->Release();
-    if (constantBuffer)
-        constantBuffer->Release();
-    if (indexBuffer)
-        indexBuffer->Release();
-    if (solidRasterizerState)
-        solidRasterizerState->Release();
-    if (wireframeRasterizerState)
-        wireframeRasterizerState->Release();
-    if (samplerState)
-        samplerState->Release();
-    if (depthStencilState)
-        depthStencilState->Release();
-    if (textureRV)
-        textureRV->Release();
-
-    if (context)
-        context->Release();
-    if (device)
-        device->Release();
-}
-
-//-----------------------------------------------------------------------------
-// window procedure
-// ** handles messages such as input and window events
-// ** right now, it's handling a quit message
-// ** also handles rasterizer state toggling, and camera movement
-LRESULT CALLBACK DirectXRenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    // retrive renderer instance pointer from window user data
-    DirectXRenderer *pThis = reinterpret_cast<DirectXRenderer *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-
-    switch (message)
-    {
-    case WM_CREATE:
-    {
-        // on creation, store the 'this' pointer in the window user data
-        // ** all of this because wireframemode = !wireframemode; can't access it directly
-        LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-        DirectXRenderer *pThis = reinterpret_cast<DirectXRenderer *>(pCreateStruct->lpCreateParams);
-
-        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pThis));
-        return 0;
-    }
-
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-
-    case WM_KEYDOWN:
-    {
-        DirectXRenderer *pThis = reinterpret_cast<DirectXRenderer *>(
-            GetWindowLongPtr(hWnd, GWLP_USERDATA));
-
-        if (pThis)
-        {
-            // ** 'R' for rasterizer
-            // ** toggles wireframe mode when pressed
-            if (wParam == 'R')
-            {
-                pThis->wireframeMode = !pThis->wireframeMode;
-            }
-        }
-        break;
-    }
-
-    case WM_LBUTTONDOWN:
-    {
-        if (pThis)
-        {
-            pThis->leftMouseDown = true;
-            pThis->prevMousePos.x = GET_X_LPARAM(lParam);
-            pThis->prevMousePos.y = GET_Y_LPARAM(lParam);
-        }
-        break;
-    }
-
-    case WM_LBUTTONUP:
-    {
-        if (pThis)
-        {
-            pThis->leftMouseDown = false;
-        }
-        break;
-    }
-
-    case WM_MOUSEMOVE:
-    {
-        if (pThis && pThis->leftMouseDown)
-        {
-            int mouseX = GET_X_LPARAM(lParam);
-            int mouseY = GET_Y_LPARAM(lParam);
-            int deltaX = mouseX - pThis->prevMousePos.x;
-            int deltaY = mouseY - pThis->prevMousePos.y;
-
-            float sensitivity = 0.002f; // ?? consider making this configurable
-            pThis->cameraYaw += deltaX * sensitivity;
-            pThis->cameraPitch -= deltaY * sensitivity;
-
-            // ** clamp pitch to prevent flipping
-            if (pThis->cameraPitch > XM_PIDIV2 - 0.1f)
-                pThis->cameraPitch = XM_PIDIV2 - 0.1f;
-            if (pThis->cameraPitch < -XM_PIDIV2 + 0.1f)
-                pThis->cameraPitch = -XM_PIDIV2 + 0.1f;
-
-            pThis->prevMousePos.x = mouseX;
-            pThis->prevMousePos.y = mouseY;
-        }
-        break;
-    }
-
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
-}
-
-//-----------------------------------------------------------------------------
-// entry point
-// ** creates an instance of the DirectXRenderer class and runs the application
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
-{
-    DirectXRenderer renderer(hInstance);
-
+    Direct3DRenderer renderer(instanceHandle);
     if (!renderer.Initialize())
     {
-        MessageBox(nullptr, L"Failed to initialize DirectXRenderer.", L"Error", MB_OK | MB_ICONERROR);
+        MessageBox(nullptr, L"Failed to initialize Direct3D Renderer.", L"Error", MB_OK | MB_ICONERROR);
         return -1;
     }
-
     renderer.Run();
-
     return 0;
 }
