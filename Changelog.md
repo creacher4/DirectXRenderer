@@ -106,15 +106,59 @@
 
 ---
 
-## [Unreleased]
+## 15th March, 2025 [v0.6]
 
-- Modularize the code further by separating functionality into additional classes.
-  - Dedicated window management class.
-  - Camera class to encapsulate all camera-related logic.
-  - More support for future features
-- With the addition of more classes, and a CMake bugfix, I can separate `main` into multiple other source and header files alike.
+- Complete engine refactoring from a monolithic `main.cpp` to a modular ECS-based architecture.
+  - Entity manager (`Registry` class).
+  - Core (`Timer` and `WindowManager` classes).
+  - Systems (`InputSystem` and `RenderSystem` class).
+  - Managers created to reduce the size of the `RenderSystem` class and more easily separate concerns.
+  - Other files created to implement the single responsibility principle (though badly at the moment).
+- Added an `External` folder to keep the program self contained.
+  - Original `DirectXTK`.
+  - Removed the use of `SpriteBatch/SpriteFont` to render UI on the screen.
+  - New `ImGui`.
+  - Created a `.gitmodules` file.
+- Rewrote `CMakeLists.txt` to reflect the previous changes.
+  - Including directories via the `External` folder.
+  - Defining `UNICODE` universally.
+  - Renamed the executable.
+- Created batch files to help streamline the development.
+  - `build.bat`: Use this for when you add/delete files and need to rebuild the entire program using CMake.
+  - `run.bat`: Use this to run the executable.
+  - `remake.bat`: Use this for when you edit a file and need to run CMake.
+- Implemented normal mapping for detailed surface rendering (Thank you [Polyhaven](https://polyhaven.com/) for providing textures etc.).
+- Enhanced lighting system with support for three light types:
+  - Directional lights.
+  - Point lights with range-based attenuation.
+  - Spot lights.
+  - For now, you can only switch between them and some of the controls don't work.
+- Added light intensity parameter for better lighting control.
+- Added support for multiple textures (diffuse and normal maps).
+- Improved material properties with proper tangent space calculations.
+- Enhanced shader pipeline.
+  - Refactored the shaders to add calculations for separate lighting systems.
+  - Added shader support for normal mapping.
+- Refined camera controls (sorta).
+- Created a GUI with `ImGui`.
+- Removed crashout comments and instead added comments to explain where the codebase needs improving.
+- Remade the `.gitignore` file to keep the executable available, in case there are issues with rebuilding.
+- Created a `NOTE.md` file.
+- Deleted the old `Arial.spritefont` and `crying_rat.png` files.
+- Added more textures to play with.
 
-## By March, 2025
+## Future Plans
 
-- Setup Basic lighting techniques (Phong lighting, point lights).
-- Add new repo issue about CMake + compilation (unless solved).
+- NOTE: A lot of the plans I want to take to make this engine better are written within the codebase itself. Also, the engine is not feature complete yet. Both for my taste and for my university assignment.
+- Adding documentation either via `Doxygen` or `GitBooks`.
+- Adding model loading via `Assimp`.
+- Supporting multipl;e cameras or a dedicated 'main' camera.
+- Moving movement logic to a separate controller.
+- Combine multiple lights rather than using the first light entity.
+  - Essentially, creating more light entities rather than splitting light types between one light entity.
+- Possibly splitting pipeline manager's responsibilities further (into a state manager, a buffer manager, and a draw call manager for example).
+- Isolating utility functions (like the tangent/bitangent calculations) into a maths class or similar.
+- Split entity management into a dedicated `EntityManager` class to further decouple entity lifecycles from component storage.
+- Learn about cache-friendly structures such as sparse sets.
+- Set up an event or message-passing system.
+- Some other stuff I'm probably forgetting but writing this here as a note to myself in case someone attacks me for it.
