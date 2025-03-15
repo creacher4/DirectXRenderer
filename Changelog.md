@@ -146,6 +146,7 @@
 - Created a `NOTE.md` file.
 - Deleted the old `Arial.spritefont` and `crying_rat.png` files.
 - Added more textures to play with.
+  - Unfortunately, I can't commit them at the moment since they're too large. I will fix this later
 
 ## Future Plans
 
