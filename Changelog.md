@@ -154,13 +154,14 @@
 
 - Fixed a bug where sphere mesh would be created inside out, causing weird texture and viewport issues.
   - Added pole caps to the sphere mesh.
+- Added `Assimp` as a submodule for future use.
 
 ---
 
 ## Future Plans
 
 - NOTE: A lot of the plans I want to take to make this engine better are written within the codebase itself. Also, the engine is not feature complete yet. Both for my taste and for my university assignment.
-- Adding documentation either via `Doxygen` or `GitBooks`.
+- Adding documentation either via `Doxygen` or `GitBook`.
 - Adding model loading via `Assimp`.
 - Supporting multiple cameras or a dedicated 'main' camera.
 - Moving movement logic to a separate controller.
