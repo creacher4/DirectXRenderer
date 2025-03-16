@@ -146,14 +146,23 @@
 - Created a `NOTE.md` file.
 - Deleted the old `Arial.spritefont` and `crying_rat.png` files.
 - Added more textures to play with.
-  - Unfortunately, I can't commit them at the moment since they're too large. I will fix this later
+  - Unfortunately, I can't commit them at the moment since they're too large. I will fix this later.
+
+---
+
+## 16th March, 2025
+
+- Fixed a bug where sphere mesh would be created inside out, causing weird texture and viewport issues.
+  - Added pole caps to the sphere mesh.
+
+---
 
 ## Future Plans
 
 - NOTE: A lot of the plans I want to take to make this engine better are written within the codebase itself. Also, the engine is not feature complete yet. Both for my taste and for my university assignment.
 - Adding documentation either via `Doxygen` or `GitBooks`.
 - Adding model loading via `Assimp`.
-- Supporting multipl;e cameras or a dedicated 'main' camera.
+- Supporting multiple cameras or a dedicated 'main' camera.
 - Moving movement logic to a separate controller.
 - Combine multiple lights rather than using the first light entity.
   - Essentially, creating more light entities rather than splitting light types between one light entity.

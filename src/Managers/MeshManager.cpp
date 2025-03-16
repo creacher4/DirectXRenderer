@@ -174,54 +174,71 @@ MeshData MeshManager::CreateCubeMesh()
     return meshData;
 }
 
-// need to recreate this function
-// idk what the hell this function does right now but when loading the sphere mesh
-// it acts weirdly
-// idk it just doesn't work
+// fixed sphere mesh creation
+// the indices were generated in the wrong order
+// this caused the sphere to render inside out
+// also capped the top and bottom of the sphere
 MeshData MeshManager::CreateSphereMesh(float radius, int slices, int stacks)
 {
     std::vector<Vertex> vertices;
     std::vector<UINT> indices;
 
-    // Create the vertices
-    for (int stack = 0; stack <= stacks; stack++)
+    for (int stack = 0; stack <= stacks; ++stack)
     {
-        float phi = DirectX::XM_PI * float(stack) / float(stacks);
-        float y = radius * cosf(phi);
-        float stackRadius = radius * sinf(phi);
+        float phi = stack * DirectX::XM_PI / stacks;
+        float sinPhi = sinf(phi);
+        float cosPhi = cosf(phi);
 
-        for (int slice = 0; slice <= slices; slice++)
+        for (int slice = 0; slice <= slices; ++slice)
         {
-            float theta = 2.0f * DirectX::XM_PI * float(slice) / float(slices);
-            float x = stackRadius * cosf(theta);
-            float z = stackRadius * sinf(theta);
+            float theta = slice * DirectX::XM_2PI / slices;
+            float sinTheta = sinf(theta);
+            float cosTheta = cosf(theta);
 
-            DirectX::XMFLOAT3 position = {x, y, z};
-            DirectX::XMFLOAT3 normal = {x / radius, y / radius, z / radius};
-            DirectX::XMFLOAT2 texCoord = {float(slice) / slices, float(stack) / stacks};
-            DirectX::XMFLOAT4 color = {1.0f, 1.0f, 1.0f, 1.0f};
+            DirectX::XMFLOAT3 position(
+                radius * sinPhi * cosTheta,
+                radius * cosPhi,
+                radius * sinPhi * sinTheta);
 
-            DirectX::XMFLOAT3 tangent = {-z, 0.0f, x};
-            float tangentLength = sqrtf(tangent.x * tangent.x + tangent.y * tangent.y + tangent.z * tangent.z);
-            if (tangentLength > 0.0f)
+            DirectX::XMFLOAT3 normal(
+                position.x / radius,
+                position.y / radius,
+                position.z / radius);
+
+            DirectX::XMFLOAT2 texCoord(
+                static_cast<float>(slice) / slices,
+                static_cast<float>(stack) / stacks);
+
+            DirectX::XMFLOAT3 tangent;
+            if (abs(normal.y) > 0.99f)
             {
-                tangent.x /= tangentLength;
-                tangent.y /= tangentLength;
-                tangent.z /= tangentLength;
+                tangent = DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f);
+            }
+            else
+            {
+                float tx = -sinTheta;
+                float ty = 0.0f;
+                float tz = cosTheta;
+
+                float len = sqrtf(tx * tx + tz * tz);
+                tangent = DirectX::XMFLOAT3(tx / len, ty, tz / len);
             }
 
-            DirectX::XMVECTOR normalVec = DirectX::XMLoadFloat3(&normal);
-            DirectX::XMVECTOR tangentVec = DirectX::XMLoadFloat3(&tangent);
-            DirectX::XMVECTOR bitangentVec = DirectX::XMVector3Cross(normalVec, tangentVec);
-
             DirectX::XMFLOAT3 bitangent;
-            DirectX::XMStoreFloat3(&bitangent, bitangentVec);
+            bitangent.x = (normal.y * tangent.z) - (normal.z * tangent.y);
+            bitangent.y = (normal.z * tangent.x) - (normal.x * tangent.z);
+            bitangent.z = (normal.x * tangent.y) - (normal.y * tangent.x);
+
+            float len = sqrtf(bitangent.x * bitangent.x + bitangent.y * bitangent.y + bitangent.z * bitangent.z);
+            bitangent.x /= len;
+            bitangent.y /= len;
+            bitangent.z /= len;
 
             Vertex vertex;
             vertex.position = position;
             vertex.normal = normal;
-            vertex.color = color;
             vertex.texCoord = texCoord;
+            vertex.color = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
             vertex.tangent = tangent;
             vertex.bitangent = bitangent;
 
@@ -229,22 +246,31 @@ MeshData MeshManager::CreateSphereMesh(float radius, int slices, int stacks)
         }
     }
 
-    for (int stack = 0; stack < stacks; stack++)
+    for (int stack = 0; stack < stacks; ++stack)
     {
-        for (int slice = 0; slice < slices; slice++)
+        for (int slice = 0; slice < slices; ++slice)
         {
-            int topLeft = stack * (slices + 1) + slice;
-            int topRight = topLeft + 1;
-            int bottomLeft = (stack + 1) * (slices + 1) + slice;
-            int bottomRight = bottomLeft + 1;
+            int current = stack * (slices + 1) + slice;
+            int next = current + 1;
+            int bottom = current + (slices + 1);
+            int bottomNext = bottom + 1;
 
-            indices.push_back(topLeft);
-            indices.push_back(bottomLeft);
-            indices.push_back(topRight);
+            // i knew there was something wrong with this
+            // reversed index generation
+            // sphere mesh renders properly now
+            if (stack > 0 || stack < stacks - 1)
+            {
+                indices.push_back(current);
+                indices.push_back(next);
+                indices.push_back(bottom);
+            }
 
-            indices.push_back(topRight);
-            indices.push_back(bottomLeft);
-            indices.push_back(bottomRight);
+            if (stack < stacks - 1)
+            {
+                indices.push_back(next);
+                indices.push_back(bottomNext);
+                indices.push_back(bottom);
+            }
         }
     }
 
@@ -257,8 +283,9 @@ MeshData MeshManager::CreateSphereMesh(float radius, int slices, int stacks)
     return meshData;
 }
 
-// this does work
-// but im yet to test it properly
+// works
+// but instead of texturing, i need to create a procedural grid
+// beginnings of a compute shader?
 MeshData MeshManager::CreatePlaneMesh(float width, float depth, int xDivs, int zDivs)
 {
     std::vector<Vertex> vertices;
