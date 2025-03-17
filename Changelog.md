@@ -158,6 +158,13 @@
 
 ---
 
+## 17th March, 2025
+
+- Replaced the old shading system with a new Lambertian-based shader.
+- Updated parts of the documentation (yet to publish).
+- Updated the scene.
+  - Removed the ground plane until I can add a compute shader for the procedural grid texture.
+
 ## Future Plans
 
 - NOTE: A lot of the plans I want to take to make this engine better are written within the codebase itself. Also, the engine is not feature complete yet. Both for my taste and for my university assignment.

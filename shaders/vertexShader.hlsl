@@ -29,15 +29,19 @@ PS_INPUT main(VS_INPUT input)
 {
     PS_INPUT output;
     
+    // transform vertex position to clip space
     output.position = mul(float4(input.position, 1.0f), wvp);
-
+    
+    // pass color and texture coordinates through
     output.color = input.color;
     output.texCoord = input.texCoord;
-
+    
+    // transform normal vectors to world space
     output.normal = normalize(mul(float4(input.normal, 0.0f), world).xyz);
     output.tangent = normalize(mul(float4(input.tangent, 0.0f), world).xyz);
     output.bitangent = normalize(mul(float4(input.bitangent, 0.0f), world).xyz);
     
+    // calculate world position for lighting calculations
     output.worldPos = mul(float4(input.position, 1.0f), world).xyz;
     
     return output;

@@ -65,7 +65,7 @@ void Application::CreateScene()
     currentScene->CreateCube({2.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f});
     currentScene->CreateSphere(1.0f, 20, 20, {0.0f, 1.0f, 5.0f}, {1.0f, 1.0f, 1.0f});
     currentScene->CreateSphere(1.0f, 20, 20, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f});
-    currentScene->CreateGroundPlane(10.0f, 10.0f, 10, 10, {0.0f, -1.0f, 0.0f});
+    // removed ground plane until i create procedural grid for it
 
     EntityID lightEntity = currentScene->CreateLight({0.0f, -1.0f, 0.0f}, {0.9f, 0.9f, 0.9f, 1.0f});
 
