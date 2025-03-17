@@ -169,6 +169,8 @@
   - Now properly calculates more accurate tangent vectors.
   - This means slightly better normal mapping support.
 - Added a check in the `MeshManager::CalculateTangentBitangent` function to deal with division by zero.
+- Updated cube mesh creation method.
+  - Now dynamically computes and assigns tangents/bitangents for each face in a single loop.
 
 ---
 

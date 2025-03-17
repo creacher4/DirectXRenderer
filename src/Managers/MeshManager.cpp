@@ -9,6 +9,10 @@ MeshManager::~MeshManager()
 {
 }
 
+// fixed cube mesh creation
+// calculates tangent and bitangent vectors for each face
+// based on the actual triangle vertices used to render it
+// rather than assuming each group of 4 vertices forms two triangles in a particular order
 MeshData MeshManager::CreateCubeMesh()
 {
     struct TempVertex
@@ -58,104 +62,8 @@ MeshData MeshManager::CreateCubeMesh()
     };
 
     Vertex vertices[24];
-    DirectX::XMFLOAT3 tangent, bitangent;
 
-    // front face (triangles 0-1)
-    CalculateTangentBitangent(
-        tempVertices[0].position, tempVertices[1].position, tempVertices[2].position,
-        tempVertices[0].texCoord, tempVertices[1].texCoord, tempVertices[2].texCoord,
-        tangent, bitangent);
-
-    for (int i = 0; i < 4; i++)
-    {
-        vertices[i].position = tempVertices[i].position;
-        vertices[i].normal = tempVertices[i].normal;
-        vertices[i].color = tempVertices[i].color;
-        vertices[i].texCoord = tempVertices[i].texCoord;
-        vertices[i].tangent = tangent;
-        vertices[i].bitangent = bitangent;
-    }
-
-    // back face (triangles 4-5)
-    CalculateTangentBitangent(
-        tempVertices[4].position, tempVertices[5].position, tempVertices[6].position,
-        tempVertices[4].texCoord, tempVertices[5].texCoord, tempVertices[6].texCoord,
-        tangent, bitangent);
-
-    for (int i = 4; i < 8; i++)
-    {
-        vertices[i].position = tempVertices[i].position;
-        vertices[i].normal = tempVertices[i].normal;
-        vertices[i].color = tempVertices[i].color;
-        vertices[i].texCoord = tempVertices[i].texCoord;
-        vertices[i].tangent = tangent;
-        vertices[i].bitangent = bitangent;
-    }
-
-    // left face (triangles 8-9)
-    CalculateTangentBitangent(
-        tempVertices[8].position, tempVertices[9].position, tempVertices[10].position,
-        tempVertices[8].texCoord, tempVertices[9].texCoord, tempVertices[10].texCoord,
-        tangent, bitangent);
-
-    for (int i = 8; i < 12; i++)
-    {
-        vertices[i].position = tempVertices[i].position;
-        vertices[i].normal = tempVertices[i].normal;
-        vertices[i].color = tempVertices[i].color;
-        vertices[i].texCoord = tempVertices[i].texCoord;
-        vertices[i].tangent = tangent;
-        vertices[i].bitangent = bitangent;
-    }
-
-    // right face (triangles 12-13)
-    CalculateTangentBitangent(
-        tempVertices[12].position, tempVertices[13].position, tempVertices[14].position,
-        tempVertices[12].texCoord, tempVertices[13].texCoord, tempVertices[14].texCoord,
-        tangent, bitangent);
-
-    for (int i = 12; i < 16; i++)
-    {
-        vertices[i].position = tempVertices[i].position;
-        vertices[i].normal = tempVertices[i].normal;
-        vertices[i].color = tempVertices[i].color;
-        vertices[i].texCoord = tempVertices[i].texCoord;
-        vertices[i].tangent = tangent;
-        vertices[i].bitangent = bitangent;
-    }
-
-    // top face (triangles 16-17)
-    CalculateTangentBitangent(
-        tempVertices[16].position, tempVertices[17].position, tempVertices[18].position,
-        tempVertices[16].texCoord, tempVertices[17].texCoord, tempVertices[18].texCoord,
-        tangent, bitangent);
-
-    for (int i = 16; i < 20; i++)
-    {
-        vertices[i].position = tempVertices[i].position;
-        vertices[i].normal = tempVertices[i].normal;
-        vertices[i].color = tempVertices[i].color;
-        vertices[i].texCoord = tempVertices[i].texCoord;
-        vertices[i].tangent = tangent;
-        vertices[i].bitangent = bitangent;
-    }
-
-    // bottom face (triangles 20-21)
-    CalculateTangentBitangent(
-        tempVertices[20].position, tempVertices[21].position, tempVertices[22].position,
-        tempVertices[20].texCoord, tempVertices[21].texCoord, tempVertices[22].texCoord,
-        tangent, bitangent);
-
-    for (int i = 20; i < 24; i++)
-    {
-        vertices[i].position = tempVertices[i].position;
-        vertices[i].normal = tempVertices[i].normal;
-        vertices[i].color = tempVertices[i].color;
-        vertices[i].texCoord = tempVertices[i].texCoord;
-        vertices[i].tangent = tangent;
-        vertices[i].bitangent = bitangent;
-    }
-
+    // indices for the triangles that make up each face
     UINT indices[] = {
         0, 1, 2, 0, 2, 3,       // front face
         4, 5, 6, 4, 6, 7,       // back face
@@ -164,6 +72,35 @@ MeshData MeshManager::CreateCubeMesh()
         16, 17, 18, 16, 18, 19, // top face
         20, 21, 22, 20, 22, 23  // bottom face
     };
+
+    // calculate tangents and bitangents for each face
+    for (int face = 0; face < 6; face++)
+    {
+        int baseIndex = face * 4; // each face has 4 vertices
+        int triIndex = face * 6;  // each face has 2 triangles (6 indices)
+
+        // calculate tangents and bitangents for first triangle of the face
+        DirectX::XMFLOAT3 tangent, bitangent;
+        CalculateTangentBitangent(
+            tempVertices[indices[triIndex]].position,
+            tempVertices[indices[triIndex + 1]].position,
+            tempVertices[indices[triIndex + 2]].position,
+            tempVertices[indices[triIndex]].texCoord,
+            tempVertices[indices[triIndex + 1]].texCoord,
+            tempVertices[indices[triIndex + 2]].texCoord,
+            tangent, bitangent);
+
+        // assign the same tangent and bitangent to all vertices of this face
+        for (int i = 0; i < 4; i++)
+        {
+            vertices[baseIndex + i].position = tempVertices[baseIndex + i].position;
+            vertices[baseIndex + i].normal = tempVertices[baseIndex + i].normal;
+            vertices[baseIndex + i].color = tempVertices[baseIndex + i].color;
+            vertices[baseIndex + i].texCoord = tempVertices[baseIndex + i].texCoord;
+            vertices[baseIndex + i].tangent = tangent;
+            vertices[baseIndex + i].bitangent = bitangent;
+        }
+    }
 
     MeshData meshData;
     meshData.vertexBuffer = resourceManager->CreateVertexBuffer(vertices, sizeof(vertices));
