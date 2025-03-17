@@ -174,10 +174,12 @@ MeshData MeshManager::CreateCubeMesh()
     return meshData;
 }
 
-// fixed sphere mesh creation
+// fixed sphere mesh creation some more
 // the indices were generated in the wrong order
 // this caused the sphere to render inside out
 // also capped the top and bottom of the sphere
+// new method provides more accurate tangent space vectors
+// based on sphere parameterization
 MeshData MeshManager::CreateSphereMesh(float radius, int slices, int stacks)
 {
     std::vector<Vertex> vertices;
@@ -209,26 +211,35 @@ MeshData MeshManager::CreateSphereMesh(float radius, int slices, int stacks)
                 static_cast<float>(slice) / slices,
                 static_cast<float>(stack) / stacks);
 
+            // calculate proper tangent space vectors
             DirectX::XMFLOAT3 tangent;
-            if (abs(normal.y) > 0.99f)
+            DirectX::XMFLOAT3 bitangent;
+
+            // tangent along theta direction (around the sphere)
+            tangent.x = -radius * sinPhi * sinTheta;
+            tangent.y = 0;
+            tangent.z = radius * sinPhi * cosTheta;
+
+            // handle poles where tangent would be zero
+            if (sinPhi < 0.0001f)
             {
                 tangent = DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f);
             }
             else
             {
-                float tx = -sinTheta;
-                float ty = 0.0f;
-                float tz = cosTheta;
-
-                float len = sqrtf(tx * tx + tz * tz);
-                tangent = DirectX::XMFLOAT3(tx / len, ty, tz / len);
+                // normalize tangent
+                float len = sqrtf(tangent.x * tangent.x + tangent.y * tangent.y + tangent.z * tangent.z);
+                tangent.x /= len;
+                tangent.y /= len;
+                tangent.z /= len;
             }
 
-            DirectX::XMFLOAT3 bitangent;
+            // calculate bitangent using cross product: B = N × T
             bitangent.x = (normal.y * tangent.z) - (normal.z * tangent.y);
             bitangent.y = (normal.z * tangent.x) - (normal.x * tangent.z);
             bitangent.z = (normal.x * tangent.y) - (normal.y * tangent.x);
 
+            // normalize bitangent
             float len = sqrtf(bitangent.x * bitangent.x + bitangent.y * bitangent.y + bitangent.z * bitangent.z);
             bitangent.x /= len;
             bitangent.y /= len;
@@ -348,6 +359,8 @@ MeshData MeshManager::CreatePlaneMesh(float width, float depth, int xDivs, int z
     return meshData;
 }
 
+// added a check for division by zero
+// if the denominator is too small, fallback to default tangent and bitangent
 void MeshManager::CalculateTangentBitangent(
     const DirectX::XMFLOAT3 &v0, const DirectX::XMFLOAT3 &v1, const DirectX::XMFLOAT3 &v2,
     const DirectX::XMFLOAT2 &uv0, const DirectX::XMFLOAT2 &uv1, const DirectX::XMFLOAT2 &uv2,
@@ -361,7 +374,18 @@ void MeshManager::CalculateTangentBitangent(
     XMFLOAT2 deltaUV1(uv1.x - uv0.x, uv1.y - uv0.y);
     XMFLOAT2 deltaUV2(uv2.x - uv0.x, uv2.y - uv0.y);
 
-    float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+    float denominator = (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+    // check for division by zero
+    if (abs(denominator) < 0.000001f)
+    {
+        // fallback to default tangent and bitangent
+        tangent = XMFLOAT3(1.0f, 0.0f, 0.0f);
+        bitangent = XMFLOAT3(0.0f, 1.0f, 0.0f);
+        return;
+    }
+
+    float f = 1.0f / denominator;
 
     tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
     tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
@@ -372,12 +396,18 @@ void MeshManager::CalculateTangentBitangent(
     bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
 
     float tangentLength = sqrtf(tangent.x * tangent.x + tangent.y * tangent.y + tangent.z * tangent.z);
-    tangent.x /= tangentLength;
-    tangent.y /= tangentLength;
-    tangent.z /= tangentLength;
+    if (tangentLength > 0.00001f)
+    {
+        tangent.x /= tangentLength;
+        tangent.y /= tangentLength;
+        tangent.z /= tangentLength;
+    }
 
     float bitangentLength = sqrtf(bitangent.x * bitangent.x + bitangent.y * bitangent.y + bitangent.z * bitangent.z);
-    bitangent.x /= bitangentLength;
-    bitangent.y /= bitangentLength;
-    bitangent.z /= bitangentLength;
+    if (bitangentLength > 0.00001f)
+    {
+        bitangent.x /= bitangentLength;
+        bitangent.y /= bitangentLength;
+        bitangent.z /= bitangentLength;
+    }
 }

@@ -165,6 +165,10 @@
 - Updated the scene.
   - Removed the ground plane until I can add a compute shader for the procedural grid texture.
 - Added a 'Known Bugs' section in the changelog.
+- Updated sphere mesh creation method.
+  - Now properly calculates more accurate tangent vectors.
+  - This means slightly better normal mapping support.
+- Added a check in the `MeshManager::CalculateTangentBitangent` function to deal with division by zero.
 
 ---
 
