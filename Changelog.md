@@ -166,10 +166,14 @@
   - Removed the ground plane until I can add a compute shader for the procedural grid texture.
 - Added a 'Known Bugs' section in the changelog.
 
+---
+
 ## Known Bugs
 
 - When changing fov to 0, the program crashes with an assertion failure.
   - This means you can't cross out the entire number to write a custom fov, but instead have to edit the individual digits instead.
+
+---
 
 ## Future Plans
 
