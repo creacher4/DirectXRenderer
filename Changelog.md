@@ -188,6 +188,7 @@
   - Which is a lot easier now, since I feel like I'm making actual productive progress on the project.
 - Made plans to update the pixel shader to support an enhanced lighting system, after finding a few bugs.
   - Also means, the (maybe) beginnings of a compute shader for (specifically) the procedural grid textures I've been planning for a while.
+- Added `ImGuizmo` as a submodule for future use.
 
 ---
 
