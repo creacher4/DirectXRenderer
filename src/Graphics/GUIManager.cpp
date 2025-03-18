@@ -131,9 +131,62 @@ void GUIManager::ShowEntityInspector()
         ImGui::Text("Entities:");
         ImGui::Separator();
 
+        // go through each new entity type separately
+
         auto entities = registry.GetEntitiesWith<TransformComponent>();
+        auto cameraEntities = registry.GetEntitiesWith<CameraComponent>();
+        auto directionalLightEntities = registry.GetEntitiesWith<DirectionalLightComponent>();
+        auto pointLightEntities = registry.GetEntitiesWith<PointLightComponent>();
+        auto spotLightEntities = registry.GetEntitiesWith<SpotLightComponent>();
+
+        for (auto entity : cameraEntities)
+        {
+            std::string label = "Camera " + std::to_string(entity);
+            if (ImGui::Selectable(label.c_str(), selectedEntity == entity))
+            {
+                selectedEntity = entity;
+            }
+        }
+
+        for (auto entity : directionalLightEntities)
+        {
+            std::string label = "Directional Light " + std::to_string(entity);
+            if (ImGui::Selectable(label.c_str(), selectedEntity == entity))
+            {
+                selectedEntity = entity;
+            }
+        }
+
+        for (auto entity : pointLightEntities)
+        {
+            std::string label = "Point Light " + std::to_string(entity);
+            if (ImGui::Selectable(label.c_str(), selectedEntity == entity))
+            {
+                selectedEntity = entity;
+            }
+        }
+
+        for (auto entity : spotLightEntities)
+        {
+            std::string label = "Spot Light " + std::to_string(entity);
+            if (ImGui::Selectable(label.c_str(), selectedEntity == entity))
+            {
+                selectedEntity = entity;
+            }
+        }
+
+        // add any other entities (such as the meshes)
+        // should just create a mesh transform component for each mesh entity tbh
         for (auto entity : entities)
         {
+            if (registry.GetComponent<CameraComponent>(entity) ||
+                registry.GetComponent<DirectionalLightComponent>(entity) ||
+                registry.GetComponent<PointLightComponent>(entity) ||
+                registry.GetComponent<SpotLightComponent>(entity))
+            {
+                continue;
+            }
+
             std::string label = "Entity " + std::to_string(entity);
             if (ImGui::Selectable(label.c_str(), selectedEntity == entity))
             {
@@ -141,12 +194,16 @@ void GUIManager::ShowEntityInspector()
             }
         }
 
+        // --
+
         ImGui::Separator();
 
         if (selectedEntity != INVALID_ENTITY)
         {
             ImGui::Text("Selected Entity: %u", selectedEntity);
 
+            // set a transform tab if the entity has a transform component
+            // - the primitive meshes
             if (auto *transform = registry.GetComponent<TransformComponent>(selectedEntity))
             {
                 if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
@@ -157,10 +214,16 @@ void GUIManager::ShowEntityInspector()
                 }
             }
 
+            // set a camera tab if the entity has a camera component
+            // note that we updated the camera component to host more properties,
+            // so now those can be changed via the camera tab rather than the transform tab
+            // - camera
             if (auto *camera = registry.GetComponent<CameraComponent>(selectedEntity))
             {
                 if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen))
                 {
+                    ImGui::DragFloat3("Position", &camera->position.x, 0.1f);
+                    ImGui::DragFloat3("Look Direction", &camera->lookDirection.x, 0.01f);
                     ImGui::SliderFloat("FOV", &camera->fov, 0.1f, DirectX::XM_PI);
                     ImGui::SliderFloat("Near Plane", &camera->nearPlane, 0.01f, 1.0f);
                     ImGui::SliderFloat("Far Plane", &camera->farPlane, 10.0f, 1000.0f);
@@ -168,24 +231,43 @@ void GUIManager::ShowEntityInspector()
                 }
             }
 
-            if (auto *light = registry.GetComponent<LightComponent>(selectedEntity))
+            // instead of a tab for a light entity with overloaded components
+            // we can just set a light tab for each light type
+            // - directional light
+            if (auto *light = registry.GetComponent<DirectionalLightComponent>(selectedEntity))
             {
-                if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen))
+                if (ImGui::CollapsingHeader("Directional Light", ImGuiTreeNodeFlags_DefaultOpen))
                 {
-                    static const char *lightTypes[] = {"Directional", "Point", "Spot"};
-                    int currentType = static_cast<int>(light->type);
-                    if (ImGui::Combo("Light Type", &currentType, lightTypes, IM_ARRAYSIZE(lightTypes)))
-                    {
-                        light->type = static_cast<LightComponent::LightType>(currentType);
-                    }
-
                     ImGui::ColorEdit3("Ambient", &light->ambientColor.x);
                     ImGui::ColorEdit3("Diffuse", &light->diffuseColor.x);
                     ImGui::DragFloat3("Direction", &light->direction.x, 0.01f, -1.0f, 1.0f);
-                    if (light->type != LightComponent::LightType::Directional)
-                    {
-                        ImGui::SliderFloat("Range", &light->range, 1.0f, 200.0f);
-                    }
+                    ImGui::SliderFloat("Intensity", &light->intensity, 0.0f, 5.0f);
+                }
+            }
+
+            if (auto *light = registry.GetComponent<PointLightComponent>(selectedEntity))
+            {
+                if (ImGui::CollapsingHeader("Point Light", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::ColorEdit3("Ambient", &light->ambientColor.x);
+                    ImGui::ColorEdit3("Diffuse", &light->diffuseColor.x);
+                    ImGui::DragFloat3("Position", &light->position.x, 0.1f);
+                    ImGui::SliderFloat("Range", &light->range, 1.0f, 200.0f);
+                    ImGui::SliderFloat("Intensity", &light->intensity, 0.0f, 5.0f);
+                }
+            }
+
+            if (auto *light = registry.GetComponent<SpotLightComponent>(selectedEntity))
+            {
+                if (ImGui::CollapsingHeader("Spot Light", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::ColorEdit3("Ambient", &light->ambientColor.x);
+                    ImGui::ColorEdit3("Diffuse", &light->diffuseColor.x);
+                    ImGui::DragFloat3("Position", &light->position.x, 0.1f);
+                    ImGui::DragFloat3("Direction", &light->direction.x, 0.01f, -1.0f, 1.0f);
+                    ImGui::SliderFloat("Range", &light->range, 1.0f, 200.0f);
+                    ImGui::SliderFloat("Inner Cone Angle", &light->innerConeAngle, 0.0f, DirectX::XM_PIDIV2);
+                    ImGui::SliderFloat("Outer Cone Angle", &light->outerConeAngle, 0.0f, DirectX::XM_PIDIV2);
                     ImGui::SliderFloat("Intensity", &light->intensity, 0.0f, 5.0f);
                 }
             }

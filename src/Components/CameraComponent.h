@@ -6,6 +6,9 @@
 class CameraComponent : public Component
 {
 public:
+    // camera needs it's own 'transform' component
+    DirectX::XMFLOAT3 position = {0.0f, 0.0f, -5.0f}; // default position
+
     DirectX::XMFLOAT3 lookDirection = {0.0f, 0.0f, 1.0f};
     DirectX::XMFLOAT3 target = {0.0f, 0.0f, 1.0f};
 
@@ -21,4 +24,8 @@ public:
     bool moveRight = false;
     bool moveUp = false;
     bool moveDown = false;
+
+    // new helper functions for camera
+    DirectX::XMMATRIX GetViewMatrix() const;
+    DirectX::XMMATRIX GetProjectionMatrix() const;
 };

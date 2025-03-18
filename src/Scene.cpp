@@ -5,6 +5,8 @@
 #include "Components/LightComponent.h"
 #include "Components/MaterialComponent.h"
 
+// a lot of stuff needs to be fixed
+
 Scene::Scene(Registry &registry, const std::string &name)
     : registry(registry), name(name)
 {
@@ -68,11 +70,15 @@ EntityID Scene::CreateCamera(const DirectX::XMFLOAT3 &position, const DirectX::X
 {
     EntityID entity = registry.CreateEntity();
 
-    auto *transform = registry.AddComponent<TransformComponent>(entity);
-    transform->position = position;
+    // got rid of the mesh transform component
+    // ofc now, we have to initialize everything in the camera component
 
     auto *camera = registry.AddComponent<CameraComponent>(entity);
+    camera->position = position;
     camera->lookDirection = lookDirection;
+    camera->target.x = position.x + lookDirection.x;
+    camera->target.y = position.y + lookDirection.y;
+    camera->target.z = position.z + lookDirection.z;
 
     return entity;
 }
@@ -81,11 +87,40 @@ EntityID Scene::CreateLight(DirectX::XMFLOAT3 direction, DirectX::XMFLOAT4 color
 {
     EntityID entity = registry.CreateEntity();
 
-    auto *transform = registry.AddComponent<TransformComponent>(entity);
+    // got rid of the mesh transform component
+    // default to directional light when creating some light entity
+    // might not even need a create directional light function
 
-    auto *light = registry.AddComponent<LightComponent>(entity);
+    auto *light = registry.AddComponent<DirectionalLightComponent>(entity);
     light->direction = direction;
     light->diffuseColor = color;
+
+    return entity;
+}
+
+// add new methods to create the other light types
+
+EntityID Scene::CreatePointLight(DirectX::XMFLOAT3 position, DirectX::XMFLOAT4 color, float range)
+{
+    EntityID entity = registry.CreateEntity();
+
+    auto *light = registry.AddComponent<PointLightComponent>(entity);
+    light->position = position;
+    light->diffuseColor = color;
+    light->range = range;
+
+    return entity;
+}
+
+EntityID Scene::CreateSpotLight(DirectX::XMFLOAT3 position, DirectX::XMFLOAT3 direction, DirectX::XMFLOAT4 color, float range)
+{
+    EntityID entity = registry.CreateEntity();
+
+    auto *light = registry.AddComponent<SpotLightComponent>(entity);
+    light->position = position;
+    light->direction = direction;
+    light->diffuseColor = color;
+    light->range = range;
 
     return entity;
 }
@@ -128,11 +163,11 @@ EntityID Scene::CreateGroundPlane(float width, float depth, int xDivs, int zDivs
 {
     EntityID entity = registry.CreateEntity();
 
-    // Add transform component
+    // add transform component
     auto *transform = registry.AddComponent<TransformComponent>(entity);
     transform->position = position;
 
-    // Add mesh component
+    // add mesh component
     auto *mesh = registry.AddComponent<MeshComponent>(entity);
     if (planeMeshData.vertexBuffer)
     {
@@ -142,7 +177,7 @@ EntityID Scene::CreateGroundPlane(float width, float depth, int xDivs, int zDivs
         mesh->vertexStride = planeMeshData.vertexStride;
     }
 
-    // Add material component
+    // add material component
     auto *material = registry.AddComponent<MaterialComponent>(entity);
     if (groundDiffuseTexture && groundNormalTexture && defaultSamplerState)
     {

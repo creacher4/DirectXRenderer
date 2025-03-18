@@ -1,6 +1,11 @@
 // documentation has been created for this new lambertian based shader
 // just need to update the documentation elsewhere and publish it
 
+// new component system in place which means having to update the shader
+// to work with the new system
+
+// next commit maybe
+
 Texture2D diffuseTexture : register(t0);
 Texture2D normalTexture : register(t1);
 SamplerState textureSampler : register(s0);

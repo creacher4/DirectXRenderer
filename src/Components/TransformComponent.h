@@ -3,6 +3,10 @@
 #include "Component.h"
 #include <DirectXMath.h>
 
+// essentially the mesh transform component now
+// i corrected the component implementations since they all use transforms differently
+// especially the lights
+
 class TransformComponent : public Component
 {
 public:

@@ -12,26 +12,21 @@ void CameraManager::ConfigureCameraMatrices(DirectX::XMMATRIX &view, DirectX::XM
     // supporting multiple cameras or a dedicated 'main' camera rather than always picking the first one was the original plan
     // will leave it for future me to solve
     auto cameraEntities = registry.GetEntitiesWith<CameraComponent>();
-
     if (!cameraEntities.empty())
     {
         auto entity = *cameraEntities.begin();
         auto *camera = registry.GetComponent<CameraComponent>(entity);
-        auto *transform = registry.GetComponent<TransformComponent>(entity);
+        // camera component replaced with it's own unique transform component
 
-        if (camera && transform)
+        if (camera)
         {
-            XMVECTOR eyePosition = XMLoadFloat3(&transform->position);
-            XMVECTOR lookDir = XMLoadFloat3(&camera->lookDirection);
-            XMVECTOR focusPoint = eyePosition + lookDir;
-            XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-
-            view = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
-            projection = XMMatrixPerspectiveFovLH(camera->fov, camera->aspectRatio, camera->nearPlane, camera->farPlane);
+            view = camera->GetViewMatrix();
+            projection = camera->GetProjectionMatrix();
             return;
         }
     }
 
+    // default just in case
     XMVECTOR eyePosition = XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f);
     XMVECTOR focusPoint = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
     XMVECTOR upDirection = XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
@@ -48,9 +43,8 @@ void CameraManager::UpdateCameraMovement(float deltaTime)
 
     auto entity = *cameraEntities.begin();
     auto *camera = registry.GetComponent<CameraComponent>(entity);
-    auto *transform = registry.GetComponent<TransformComponent>(entity);
 
-    if (!camera || !transform)
+    if (!camera)
         return;
 
     XMVECTOR lookDir = XMLoadFloat3(&camera->lookDirection);
@@ -63,53 +57,57 @@ void CameraManager::UpdateCameraMovement(float deltaTime)
     float moveAmount = camera->moveSpeed * deltaTime;
 
     // might move movement logic to a separate function
+    // we can use the camera to update the position rather than the mesh transform
     if (camera->moveForward)
     {
-        XMVECTOR pos = XMLoadFloat3(&transform->position);
+        XMVECTOR pos = XMLoadFloat3(&camera->position);
         pos = XMVectorAdd(pos, XMVectorScale(lookDir, moveAmount));
-        XMStoreFloat3(&transform->position, pos);
+        XMStoreFloat3(&camera->position, pos);
     }
     if (camera->moveBackward)
     {
-        XMVECTOR pos = XMLoadFloat3(&transform->position);
+        XMVECTOR pos = XMLoadFloat3(&camera->position);
         pos = XMVectorSubtract(pos, XMVectorScale(lookDir, moveAmount));
-        XMStoreFloat3(&transform->position, pos);
+        XMStoreFloat3(&camera->position, pos);
     }
 
     if (camera->moveLeft)
     {
-        XMVECTOR pos = XMLoadFloat3(&transform->position);
+        XMVECTOR pos = XMLoadFloat3(&camera->position);
         pos = XMVectorSubtract(pos, XMVectorScale(rightVector, moveAmount));
-        XMStoreFloat3(&transform->position, pos);
+        XMStoreFloat3(&camera->position, pos);
     }
     if (camera->moveRight)
     {
-        XMVECTOR pos = XMLoadFloat3(&transform->position);
+        XMVECTOR pos = XMLoadFloat3(&camera->position);
         pos = XMVectorAdd(pos, XMVectorScale(rightVector, moveAmount));
-        XMStoreFloat3(&transform->position, pos);
+        XMStoreFloat3(&camera->position, pos);
     }
 
     if (camera->moveUp)
     {
-        XMVECTOR pos = XMLoadFloat3(&transform->position);
+        XMVECTOR pos = XMLoadFloat3(&camera->position);
         pos = XMVectorAdd(pos, XMVectorScale(upVector, moveAmount));
-        XMStoreFloat3(&transform->position, pos);
+        XMStoreFloat3(&camera->position, pos);
     }
     if (camera->moveDown)
     {
-        XMVECTOR pos = XMLoadFloat3(&transform->position);
+        XMVECTOR pos = XMLoadFloat3(&camera->position);
         pos = XMVectorSubtract(pos, XMVectorScale(upVector, moveAmount));
-        XMStoreFloat3(&transform->position, pos);
+        XMStoreFloat3(&camera->position, pos);
     }
 
     lookDir = XMVector3Normalize(lookDir);
     XMStoreFloat3(&camera->lookDirection, lookDir);
 
-    camera->target.x = transform->position.x + camera->lookDirection.x;
-    camera->target.y = transform->position.y + camera->lookDirection.y;
-    camera->target.z = transform->position.z + camera->lookDirection.z;
+    // again, updating target using the camera position transform rather than the mesh transform
+    camera->target.x = camera->position.x + camera->lookDirection.x;
+    camera->target.y = camera->position.y + camera->lookDirection.y;
+    camera->target.z = camera->position.z + camera->lookDirection.z;
 }
 
+// not sure if im even using this function??
+// maybe in a separate class or something
 EntityID CameraManager::FindMainCameraEntity()
 {
     auto cameraEntities = registry.GetEntitiesWith<CameraComponent>();

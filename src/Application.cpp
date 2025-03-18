@@ -57,22 +57,52 @@ bool Application::InitializeSystems()
     return true;
 }
 
+// updating the formatting to easier read what each functions parameters are
 void Application::CreateScene()
 {
-    EntityID cameraEntity = currentScene->CreateCamera({0.0f, 0.0f, -5.0f}, {0.0f, 0.0f, 1.0f});
+    // i forgot why im not using EntityID for everything in this function
+    EntityID cameraEntity = currentScene->CreateCamera(
+        {0.0f, 0.0f, -5.0f}, // position
+        {0.0f, 0.0f, 1.0f}   // look direction
+    );
 
-    currentScene->CreateCube({-2.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f});
-    currentScene->CreateCube({2.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f});
-    currentScene->CreateSphere(1.0f, 20, 20, {0.0f, 1.0f, 5.0f}, {1.0f, 1.0f, 1.0f});
-    currentScene->CreateSphere(1.0f, 20, 20, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f});
+    // maybe some instancing or something would be better here
+    currentScene->CreateCube(
+        {-2.0f, 0.0f, 0.0f}, // position
+        {1.0f, 1.0f, 1.0f}   // scale
+    );
+    currentScene->CreateCube(
+        {2.0f, 0.0f, 0.0f}, // position
+        {1.0f, 1.0f, 1.0f}  // scale
+    );
+    currentScene->CreateSphere(
+        1.0f, 20, 20,       // radius, slices, stacks
+        {0.0f, 1.0f, 5.0f}, // position
+        {1.0f, 1.0f, 1.0f}  // scale
+    );
+    currentScene->CreateSphere(
+        1.0f, 20, 20,       // radius, slices, stacks
+        {0.0f, 1.0f, 0.0f}, // position
+        {1.0f, 1.0f, 1.0f}  // scale
+    );
     // removed ground plane until i create procedural grid for it
 
-    EntityID lightEntity = currentScene->CreateLight({0.0f, -1.0f, 0.0f}, {0.9f, 0.9f, 0.9f, 1.0f});
+    // create different types of lights
+    // directional light for now
+    currentScene->CreateLight(
+        {0.0f, -1.0f, 0.0f},
+        {0.9f, 0.9f, 0.9f, 1.0f});
 
-    if (auto *transform = registry.GetComponent<TransformComponent>(lightEntity))
-    {
-        transform->position = {0.0f, 3.0f, -3.0f};
-    }
+    /**
+     * @brief - add these if you want multiple light types for testing
+     *
+     * @warning won't work with the current shader setup so you'll have to replace the other create light function first
+     */
+
+    // currentScene->CreatePointLight({0.0f, 3.0f, 0.0f}, {0.8f, 0.2f, 0.2f, 1.0f}, 10.0f);
+    // currentScene->CreateSpotLight({0.0f, 3.0f, -3.0f}, {0.0f, -1.0f, 0.0f}, {0.2f, 0.2f, 0.9f, 1.0f}, 15.0f);
+
+    /// removed the useless transform that was here
 }
 
 void Application::Run()

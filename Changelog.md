@@ -174,6 +174,23 @@
 
 ---
 
+## 18th March, 2025
+
+- Some small changes to the component system.
+  - Each entity works with different properties and so, the component system is being updated to better support this.
+  - An improved lighting component for better lighting type support.
+  - A new camera component that handles camera movement separately from other entities.
+- Updated the rest of the codebase to reflect these changes.
+  - Updated the `Scene` class methods to use the new component system.
+- Updated the GUI to reflect the new component system, bettering the user experience.
+- Updated formatting of some code, specifically in the `Application` class for better readability.
+- Added some documentation through comments.
+  - Which is a lot easier now, since I feel like I'm making actual productive progress on the project.
+- Made plans to update the pixel shader to support an enhanced lighting system, after finding a few bugs.
+  - Also means, the (maybe) beginnings of a compute shader for (specifically) the procedural grid textures I've been planning for a while.
+
+---
+
 ## Known Bugs
 
 - When changing fov to 0, the program crashes with an assertion failure.
