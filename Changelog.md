@@ -194,7 +194,7 @@
 
 ## 20th March, 2025
 
-- Changed the scene setup for better mesh/lighting visualisations
+- Changed the scene setup for better mesh/lighting visualisations.
 - Improved the pixel shader (somewhat. I quite liked the previous version and so might revert back to it in some manner).
   - Improved normal mapping calculations.
   - Enhanced the lighting model with a new roughness calculation (in preparation for PBR in the future).
