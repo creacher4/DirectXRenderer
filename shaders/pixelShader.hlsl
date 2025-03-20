@@ -223,7 +223,7 @@ float4 main(PS_INPUT input) : SV_Target
     
     // apply a very subtle toon shading by discretizing the final color
     // comment out this line for a smoother look
-    // i have it out commented because i dont like the look of it
+    // i have it commented out because i dont like the look of it
     // reminds me of lethal company tbh
     // finalColor = floor(finalColor * 5.0f) / 5.0f;
 

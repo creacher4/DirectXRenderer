@@ -206,6 +206,8 @@
   - Added view angle dependancy for a more natural rim effect.
   - Added some optional post-processing effects (commented out for now).
 - Found a new bug with the directional light setup.
+- Added `Doxygen` style comments to the `Registry` class.
+  - Taking a step towards a better commented codebase.
 
 ---
 

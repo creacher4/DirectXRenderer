@@ -93,7 +93,7 @@ void Application::CreateScene()
      * @warning multiple lights won't work with the current shader setup so you'll have to replace the other create light function first
      */
 
-    // currentscene->createlight(
+    // currentScene->CreateLight(
     //     {0.0f, -1.0f, 0.0f},     // direction
     //     {0.9f, 0.9f, 0.9f, 1.0f} // color
     // );
