@@ -213,6 +213,8 @@
   - Removing redudant `this->` usage since variable names don't conflict.
   - Explicitly stated destructor as default.
   - Added better error handling.
+- In the `WindowManager` class:
+  - Removed the use of the global static pointer by passing the instance via user data.
 
 ---
 

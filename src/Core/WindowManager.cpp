@@ -1,13 +1,8 @@
 #include "WindowManager.h"
 
-// static instance for the window manager
-// this is necessary for the window procedure to work
-static WindowManager *s_pWindowManager = nullptr;
-
 WindowManager::WindowManager()
     : hwnd(NULL), hInstance(NULL), windowWidth(0), windowHeight(0)
 {
-    s_pWindowManager = this;
 }
 
 WindowManager::~WindowManager()
@@ -21,7 +16,7 @@ bool WindowManager::Initialize(HINSTANCE hInstance, int width, int height, const
     this->windowHeight = height;
     this->windowTitle = title;
 
-    // Register window class
+    // register window class
     WNDCLASSEX wcex = {};
     wcex.cbSize = sizeof(WNDCLASSEX);
     wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -57,6 +52,9 @@ bool WindowManager::Initialize(HINSTANCE hInstance, int width, int height, const
     if (!hwnd)
         return false;
 
+    // associate this instance with the window handle using GWLP_USERDATA
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+
     ShowWindow(hwnd, SW_SHOW);
     UpdateWindow(hwnd);
 
@@ -65,39 +63,26 @@ bool WindowManager::Initialize(HINSTANCE hInstance, int width, int height, const
 
 LRESULT CALLBACK WindowManager::WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    // Forward message to the appropriate instance
-    if (s_pWindowManager)
+    // retrieve instance pointer stored in GWLP_USERDATA
+    WindowManager *self = reinterpret_cast<WindowManager *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+    if (self)
     {
-        // Handle window resize
         if (message == WM_SIZE && wParam != SIZE_MINIMIZED)
         {
             UINT width = LOWORD(lParam);
             UINT height = HIWORD(lParam);
-
-            // Update stored dimensions
-            s_pWindowManager->windowWidth = width;
-            s_pWindowManager->windowHeight = height;
-
-            // Notify via callback
-            if (s_pWindowManager->resizeCallback && width > 0 && height > 0)
-            {
-                s_pWindowManager->resizeCallback(width, height);
-            }
+            self->windowWidth = width;
+            self->windowHeight = height;
+            if (self->resizeCallback && width > 0 && height > 0)
+                self->resizeCallback(width, height);
         }
-
-        // Forward all messages to the message callback
-        if (s_pWindowManager->messageCallback)
-        {
-            s_pWindowManager->messageCallback(message, wParam, lParam);
-        }
+        if (self->messageCallback)
+            self->messageCallback(message, wParam, lParam);
     }
-
-    switch (message)
+    if (message == WM_DESTROY)
     {
-    case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
     }
-
     return DefWindowProc(hwnd, message, wParam, lParam);
 }
