@@ -222,6 +222,8 @@
   - This means you can't cross out the entire number to write a custom fov, but instead have to edit the individual digits.
 - The directional light seems like it emits the light from the origin (0, 0) and so anything at the origin will remain either unlit or badly lit.
   - There are a few other issues that come along with this but I'm yet to document them all.
+- The precompiled executable given along with the commit doesn't actually work.
+  - Not sure why but I guess adding more debug logs would help me figure it out.
 
 ---
 
