@@ -216,7 +216,7 @@
 
 ---
 
-## Known Bugs
+## Known Bugs/Issues
 
 - When changing fov to 0, the program crashes with an assertion failure.
   - This means you can't cross out the entire number to write a custom fov, but instead have to edit the individual digits.
