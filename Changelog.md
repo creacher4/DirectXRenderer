@@ -208,6 +208,11 @@
 - Found a new bug with the directional light setup.
 - Added `Doxygen` style comments to the `Registry` class.
   - Taking a step towards a better commented codebase.
+- In the `ShaderManager` class:
+  - Added `device` to the member initializer list instead of assigning device inside the constructor body.
+  - Removing redudant `this->` usage since variable names don't conflict.
+  - Explicitly stated destructor as default.
+  - Added better error handling.
 
 ---
 

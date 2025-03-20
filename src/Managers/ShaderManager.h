@@ -12,8 +12,8 @@ class ShaderManager
 {
 public:
     ShaderManager(ID3D11Device *device);
-    ShaderManager(std::shared_ptr<ResourceManager> resourceManager); // Updated constructor
-    ~ShaderManager();
+    ShaderManager(std::shared_ptr<ResourceManager> resourceManager);
+    ~ShaderManager() = default;
 
     bool CompileAndCreateVertexShader(const std::wstring &filename,
                                       const std::string &entryPoint,

@@ -3,23 +3,13 @@
 #include <string>
 #include <stdexcept>
 
-ShaderManager::ShaderManager(ID3D11Device *device) : resourceManager(nullptr)
-{
-    this->device = device;
-}
+ShaderManager::ShaderManager(ID3D11Device *device)
+    : device(device), resourceManager(nullptr) {}
 
 ShaderManager::ShaderManager(std::shared_ptr<ResourceManager> resourceManager)
-    : resourceManager(resourceManager)
-{
-    if (resourceManager)
-    {
-        this->device = resourceManager->GetDevice();
-    }
-}
+    : resourceManager(resourceManager), device(resourceManager ? resourceManager->GetDevice() : nullptr) {}
 
-ShaderManager::~ShaderManager()
-{
-}
+// default destructor
 
 bool ShaderManager::CompileAndCreateVertexShader(
     const std::wstring &filename,
@@ -29,6 +19,12 @@ bool ShaderManager::CompileAndCreateVertexShader(
 {
     if (!CompileShaderFromFile(filename, entryPoint, "vs_5_0", shaderBlob))
         return false;
+
+    // ensure device is valid before use
+    if (!device)
+    {
+        throw std::runtime_error("ShaderManager: device is null. Cannot create vertex shader.");
+    }
 
     HRESULT hr = device->CreateVertexShader(
         shaderBlob->GetBufferPointer(),
@@ -48,6 +44,12 @@ bool ShaderManager::CompileAndCreatePixelShader(
     if (!CompileShaderFromFile(filename, entryPoint, "ps_5_0", shaderBlob))
         return false;
 
+    // ensure device is valid before use
+    if (!device)
+    {
+        throw std::runtime_error("ShaderManager: device is null. Cannot create pixel shader.");
+    }
+
     HRESULT hr = device->CreatePixelShader(
         shaderBlob->GetBufferPointer(),
         shaderBlob->GetBufferSize(),
@@ -63,6 +65,13 @@ bool ShaderManager::CreateInputLayout(
     ID3DBlob *shaderBlob,
     Microsoft::WRL::ComPtr<ID3D11InputLayout> &inputLayout)
 {
+
+    // ensure device is valid before use
+    if (!device)
+    {
+        throw std::runtime_error("ShaderManager: device is null. Cannot create input layout.");
+    }
+
     HRESULT hr = device->CreateInputLayout(
         layout,
         numElements,
@@ -102,9 +111,10 @@ bool ShaderManager::CompileShaderFromFile(
     {
         if (errorBlob)
         {
-            OutputDebugStringA(static_cast<const char *>(errorBlob->GetBufferPointer()));
+            std::string errorMessage = static_cast<const char *>(errorBlob->GetBufferPointer());
+            OutputDebugStringA(errorMessage.c_str());
         }
-        return false;
+        throw std::runtime_error("Failed to compile shader: " + std::string(entryPoint));
     }
 
     return true;
