@@ -62,18 +62,18 @@ void Application::CreateScene()
 {
     // i forgot why im not using EntityID for everything in this function
     EntityID cameraEntity = currentScene->CreateCamera(
-        {0.0f, 0.0f, -5.0f}, // position
-        {0.0f, 0.0f, 1.0f}   // look direction
+        {5.5f, 2.5f, 3.27f},        // position
+        {-0.979f, -0.168f, -0.120f} // look direction
     );
 
     // maybe some instancing or something would be better here
     currentScene->CreateCube(
-        {-2.0f, 0.0f, 0.0f}, // position
+        {-2.0f, 2.9f, 1.9f}, // position
         {1.0f, 1.0f, 1.0f}   // scale
     );
     currentScene->CreateCube(
-        {2.0f, 0.0f, 0.0f}, // position
-        {1.0f, 1.0f, 1.0f}  // scale
+        {-2.0f, 0.8f, 1.7f}, // position
+        {1.0f, 1.0f, 1.0f}   // scale
     );
     currentScene->CreateSphere(
         1.0f, 20, 20,       // radius, slices, stacks
@@ -87,22 +87,28 @@ void Application::CreateScene()
     );
     // removed ground plane until i create procedural grid for it
 
-    // create different types of lights
-    // directional light for now
-    currentScene->CreateLight(
-        {0.0f, -1.0f, 0.0f},
-        {0.9f, 0.9f, 0.9f, 1.0f});
-
     /**
-     * @brief - add these if you want multiple light types for testing
+     * @brief - add these if you want multiple light types for testing. ctrl + k to comment out and ctrl + shift + k to uncomment
      *
-     * @warning won't work with the current shader setup so you'll have to replace the other create light function first
+     * @warning multiple lights won't work with the current shader setup so you'll have to replace the other create light function first
      */
 
-    // currentScene->CreatePointLight({0.0f, 3.0f, 0.0f}, {0.8f, 0.2f, 0.2f, 1.0f}, 10.0f);
-    // currentScene->CreateSpotLight({0.0f, 3.0f, -3.0f}, {0.0f, -1.0f, 0.0f}, {0.2f, 0.2f, 0.9f, 1.0f}, 15.0f);
+    // currentscene->createlight(
+    //     {0.0f, -1.0f, 0.0f},     // direction
+    //     {0.9f, 0.9f, 0.9f, 1.0f} // color
+    // );
 
-    /// removed the useless transform that was here
+    currentScene->CreatePointLight(
+        {0.0f, 2.0f, 2.5f},       // position
+        {1.0f, 1.0f, 1.0f, 1.0f}, // color
+        10.0f                     // range
+    );
+
+    // currentScene->CreateSpotLight(
+    //     {0.0f, 3.0f, -3.0f},      // position
+    //     {0.0f, -1.0f, 0.0f},      // direction
+    //     {0.2f, 0.2f, 0.9f, 1.0f}, // color
+    //     10.0f);                   // range
 }
 
 void Application::Run()

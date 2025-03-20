@@ -192,10 +192,29 @@
 
 ---
 
+## 20th March, 2025
+
+- Changed the scene setup for better mesh/lighting visualisations
+- Improved the pixel shader (somewhat. I quite liked the previous version and so might revert back to it in some manner).
+  - Improved normal mapping calculations.
+  - Enhanced the lighting model with a new roughness calculation (in preparation for PBR in the future).
+  - Point lights:
+    - Improved distance attenuation with smoother falloff.
+  - Spotlights:
+    - More accurate cone calculations with smoother transitions.
+    - Improved attenuation at spotlight edges.
+  - Added view angle dependancy for a more natural rim effect.
+  - Added some optional post-processing effects (commented out for now).
+- Found a new bug with the directional light setup.
+
+---
+
 ## Known Bugs
 
 - When changing fov to 0, the program crashes with an assertion failure.
   - This means you can't cross out the entire number to write a custom fov, but instead have to edit the individual digits.
+- The directional light seems like it emits the light from the origin (0, 0) and so anything at the origin will remain either unlit or badly lit.
+  - There are a few other issues that come along with this but I'm yet to document them all.
 
 ---
 
