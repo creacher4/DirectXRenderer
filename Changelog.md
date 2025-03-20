@@ -215,6 +215,7 @@
   - Added better error handling.
 - In the `WindowManager` class:
   - Removed the use of the global static pointer by passing the instance via user data.
+- Small update to the `lightComponent` class.
 
 ---
 

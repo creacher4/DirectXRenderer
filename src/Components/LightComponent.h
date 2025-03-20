@@ -3,6 +3,14 @@
 #include "Component.h"
 #include <DirectXMath.h>
 
+// scoped enum outside of class for better type safety and clarity
+enum class LightType
+{
+    Directional,
+    Point,
+    Spot
+};
+
 // needs fixing
 class BaseLightComponent : public Component
 {
@@ -12,13 +20,6 @@ public:
     DirectX::XMFLOAT4 diffuseColor = {0.8f, 0.8f, 0.8f, 1.0f};
     float intensity = 1.0f;
     bool isEnabled = true;
-
-    enum class LightType
-    {
-        Directional,
-        Point,
-        Spot
-    };
 
     virtual LightType GetLightType() const = 0;
 };
