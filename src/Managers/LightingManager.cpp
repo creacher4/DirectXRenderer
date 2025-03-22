@@ -16,21 +16,25 @@ LightingManager::~LightingManager()
 
 bool LightingManager::Initialize()
 {
-    // this HAS to be suboptimal in some way
-    // this will be sorted out later
-    // atm, you can only switch between the different light types by changing the type in the editor
-    // this is NOT the way i wanted to do it originally but will keep it like this until i create a separate gui system
     LightBuffer lightData = {};
-    lightData.ambientColor = DirectX::XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-    lightData.diffuseColor = DirectX::XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
-    lightData.lightDirection = DirectX::XMFLOAT3(0.0f, -1.0f, 1.0f);
-    lightData.padding1 = 0.0f;
-    lightData.lightPosition = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
-    lightData.lightRange = 100.0f;
-    lightData.spotInnerCone = cosf(DirectX::XMConvertToRadians(30.0f));
-    lightData.spotOuterCone = cosf(DirectX::XMConvertToRadians(45.0f));
-    lightData.lightType = 0;
-    lightData.lightIntensity = 1.0f;
+
+    // set some default values for all lights
+    // not sure if i want them all rn but it's okay
+    for (int i = 0; i < MAX_LIGHTS; i++)
+    {
+        lightData.lights[i].ambientColor = DirectX::XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+        lightData.lights[i].diffuseColor = DirectX::XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
+        lightData.lights[i].lightDirection = DirectX::XMFLOAT3(0.0f, -1.0f, 1.0f);
+        lightData.lights[i].padding1 = 0.0f;
+        lightData.lights[i].lightPosition = DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f);
+        lightData.lights[i].lightRange = 100.0f;
+        lightData.lights[i].spotInnerCone = cosf(DirectX::XMConvertToRadians(30.0f));
+        lightData.lights[i].spotOuterCone = cosf(DirectX::XMConvertToRadians(45.0f));
+        lightData.lights[i].lightType = 0;
+        lightData.lights[i].lightIntensity = 1.0f;
+    }
+
+    lightData.activeLightCount = 0;
 
     auto resourceManager = std::make_shared<ResourceManager>(device.Get(), context.Get());
     lightConstantBuffer = resourceManager->CreateConstantBuffer(sizeof(LightBuffer), &lightData);
@@ -41,78 +45,70 @@ bool LightingManager::Initialize()
 void LightingManager::Update()
 {
     LightBuffer lightData = {};
-    lightData.ambientColor = DirectX::XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
-    lightData.lightType = 0;
+    int lightIndex = 0;
 
-    // now we can just go through each light type entity separately
+    // process each light type separately
 
     auto directionalLights = registry.GetEntitiesWith<DirectionalLightComponent>();
-    if (!directionalLights.empty())
+    for (auto entity : directionalLights)
     {
-        auto entity = *directionalLights.begin();
+        if (lightIndex >= MAX_LIGHTS)
+            break;
+
         auto *light = registry.GetComponent<DirectionalLightComponent>(entity);
-
-        if (light)
+        if (light && light->isEnabled)
         {
-            lightData.ambientColor = light->ambientColor;
-            lightData.diffuseColor = light->diffuseColor;
-            lightData.lightIntensity = light->intensity;
-
-            // everything after this is for that specific light type
-            // obviously we could type 0 here but like ehhhh
-            lightData.lightType = static_cast<int>(light->GetLightType());
-            lightData.lightDirection = light->direction;
+            lightData.lights[lightIndex].ambientColor = light->ambientColor;
+            lightData.lights[lightIndex].diffuseColor = light->diffuseColor;
+            lightData.lights[lightIndex].lightIntensity = light->intensity;
+            lightData.lights[lightIndex].lightType = static_cast<int>(light->GetLightType());
+            lightData.lights[lightIndex].lightDirection = light->direction;
+            lightIndex++;
         }
     }
-
-    // overrides directional light if there is a point light
 
     auto pointLights = registry.GetEntitiesWith<PointLightComponent>();
-    if (!pointLights.empty())
+    for (auto entity : pointLights)
     {
-        auto entity = *pointLights.begin();
+        if (lightIndex >= MAX_LIGHTS)
+            break;
+
         auto *light = registry.GetComponent<PointLightComponent>(entity);
-
-        if (light)
+        if (light && light->isEnabled)
         {
-            lightData.ambientColor = light->ambientColor;
-            lightData.diffuseColor = light->diffuseColor;
-            lightData.lightIntensity = light->intensity;
-
-            // everything after this is for that specific light type
-            // obviously we could type 1 here but like ehhhh
-            lightData.lightType = static_cast<int>(light->GetLightType());
-            lightData.lightPosition = light->position;
-            lightData.lightRange = light->range;
+            lightData.lights[lightIndex].ambientColor = light->ambientColor;
+            lightData.lights[lightIndex].diffuseColor = light->diffuseColor;
+            lightData.lights[lightIndex].lightIntensity = light->intensity;
+            lightData.lights[lightIndex].lightType = static_cast<int>(light->GetLightType());
+            lightData.lights[lightIndex].lightPosition = light->position;
+            lightData.lights[lightIndex].lightRange = light->range;
+            lightIndex++;
         }
     }
-
-    // overrides everything else since it's last
 
     auto spotLights = registry.GetEntitiesWith<SpotLightComponent>();
-    if (!spotLights.empty())
+    for (auto entity : spotLights)
     {
-        auto entity = *spotLights.begin();
+        if (lightIndex >= MAX_LIGHTS)
+            break;
+
         auto *light = registry.GetComponent<SpotLightComponent>(entity);
-
-        if (light)
+        if (light && light->isEnabled)
         {
-            lightData.ambientColor = light->ambientColor;
-            lightData.diffuseColor = light->diffuseColor;
-            lightData.lightIntensity = light->intensity;
-
-            // everything after this is for that specific light type
-            // obviously we could type 2 here but like ehhhh
-            lightData.lightType = static_cast<int>(light->GetLightType());
-            lightData.lightPosition = light->position;
-            lightData.lightDirection = light->direction;
-            lightData.lightRange = light->range;
-            // convert to radians maybe?
-            lightData.spotInnerCone = cosf(light->innerConeAngle);
-            lightData.spotOuterCone = cosf(light->outerConeAngle);
+            lightData.lights[lightIndex].ambientColor = light->ambientColor;
+            lightData.lights[lightIndex].diffuseColor = light->diffuseColor;
+            lightData.lights[lightIndex].lightIntensity = light->intensity;
+            lightData.lights[lightIndex].lightType = static_cast<int>(light->GetLightType());
+            lightData.lights[lightIndex].lightPosition = light->position;
+            lightData.lights[lightIndex].lightDirection = light->direction;
+            lightData.lights[lightIndex].lightRange = light->range;
+            lightData.lights[lightIndex].spotInnerCone = cosf(light->innerConeAngle);
+            lightData.lights[lightIndex].spotOuterCone = cosf(light->outerConeAngle);
+            lightIndex++;
         }
     }
 
+    lightData.activeLightCount = lightIndex;
     context->UpdateSubresource(lightConstantBuffer.Get(), 0, nullptr, &lightData, 0, 0);
 }
 

@@ -2,7 +2,8 @@
 
 #include <DirectXMath.h>
 
-// honestly, need to fix the layouts and names of these buffers
+// some small number for now
+#define MAX_LIGHTS 8
 
 struct MatrixBuffer
 {
@@ -10,7 +11,9 @@ struct MatrixBuffer
     DirectX::XMMATRIX wvp;
 };
 
-struct LightBuffer
+// this is the buffer that will be used to pass the light data to the pixel shader
+// so we can just change the name of this buffer to LightData instead
+struct LightData
 {
     DirectX::XMFLOAT4 ambientColor;
     DirectX::XMFLOAT4 diffuseColor;
@@ -25,6 +28,13 @@ struct LightBuffer
 
     int lightType;
     float lightIntensity;
+};
+
+struct LightBuffer
+{
+    LightData lights[MAX_LIGHTS];
+    int activeLightCount;
+    DirectX::XMFLOAT3 padding;
 };
 
 struct CameraBuffer

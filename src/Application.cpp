@@ -88,20 +88,29 @@ void Application::CreateScene()
     // removed ground plane until i create procedural grid for it
 
     /**
-     * @brief - add these if you want multiple light types for testing. ctrl + k to comment out and ctrl + shift + k to uncomment
+     * @brief - multiple lights work now. however, the ambient term for every light but the first one is ignored it seems
      *
-     * @warning multiple lights won't work with the current shader setup so you'll have to replace the other create light function first
+     * @todo - add a way to add/remove lights within the editor
      */
 
-    // currentScene->CreateLight(
-    //     {0.0f, -1.0f, 0.0f},     // direction
-    //     {0.9f, 0.9f, 0.9f, 1.0f} // color
-    // );
+    // some directional light (sun)
+    currentScene->CreateLight(
+        {0.0f, -1.0f, 0.0f},     // direction
+        {0.7f, 0.7f, 0.7f, 1.0f} // color
+    );
 
+    // point light 1 (warm)
     currentScene->CreatePointLight(
         {-2.9f, 1.8f, 2.5f},      // position
-        {1.0f, 1.0f, 1.0f, 1.0f}, // color
+        {1.0f, 0.8f, 0.6f, 1.0f}, // color
         7.5f                      // range
+    );
+
+    // point light 2 (cool)
+    currentScene->CreatePointLight(
+        {2.0f, 1.5f, 4.0f},       // position
+        {0.6f, 0.8f, 1.0f, 1.0f}, // color (cool)
+        5.0f                      // range
     );
 
     // currentScene->CreateSpotLight(

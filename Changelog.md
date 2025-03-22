@@ -227,6 +227,11 @@
 - Updated the scene for further testing.
 - Updates to the `MeshManager` class:
   - Sphere mesh creation now uses optimized SIMD operations rather than manual ones.
+- Added support for multiple lights in the scene (up to 8).
+  - `Buffers.h` - Updated the light buffers to better handle the light data.
+  - `LightingManager.cpp` - Updated the lighting manager to better handle the new light buffers.
+  - `pixelShader.hlsl` - Updated the pixel shader to now iterate through each light in the light buffer to calculate it's contribution.
+  - `Application.cpp` - Updated the scene with 2 new lights for now.
 
 ---
 
