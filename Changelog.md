@@ -222,6 +222,8 @@
 ## 22nd March, 2025
 
 - Small update to the pixel shader.
+  - Correctly calculates bitangent now.
+  - Removed the previous referenced shader, cleaning up the file.
 - Updated the scene for further testing.
 - Updates to the `MeshManager` class:
   - Sphere mesh creation now uses optimized SIMD operations rather than manual ones.
