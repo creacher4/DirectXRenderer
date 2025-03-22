@@ -219,14 +219,20 @@
 
 ---
 
+## 22nd March, 2025
+
+- Small update to the pixel shader.
+- Updated the scene for further testing.
+
+---
+
 ## Known Bugs/Issues
 
 - When changing fov to 0, the program crashes with an assertion failure.
   - This means you can't cross out the entire number to write a custom fov, but instead have to edit the individual digits.
-- The directional light seems like it emits the light from the origin (0, 0) and so anything at the origin will remain either unlit or badly lit.
-  - There are a few other issues that come along with this but I'm yet to document them all.
-- The precompiled executable given along with the commit doesn't actually work.
-  - Not sure why but I guess adding more debug logs would help me figure it out.
+- The lighting bug at the origin, where normal map shading doesn't work as intended. Not sure if it has something to do with world space calculations at (0, 0, 0). Needs further testing.
+- The precompiled executable given along with the commit doesn't seem to work.
+  - Not sure why. Planning to figure it out.
 
 ---
 

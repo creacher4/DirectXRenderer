@@ -178,7 +178,7 @@ float4 main(PS_INPUT input) : SV_Target
 
     // you'd extract roughness from an alpha map or smth but i dont have that yet
     // so i'm just gonna use a default value
-    float roughness = 0.1f; // default roughness value is 0.1 because it makes stuff look good
+    float roughness = 0.5f;
 
     // sample normal map and transform to world space
     float3 normalMapValue = normalTexture.Sample(textureSampler, input.texCoord).rgb;
@@ -188,7 +188,9 @@ float4 main(PS_INPUT input) : SV_Target
     float3 N = normalize(input.normal);
     float3 T = normalize(input.tangent);
     T = normalize(T - dot(T, N) * N); // gram-schmidt orthogonalization
-    float3 B = normalize((N, T));
+    // cross product to get bitangent
+    // completetly forgot about this
+    float3 B = normalize(cross(N, T));
 
     // apply normal map
     float3x3 TBN = float3x3(T, B, N);

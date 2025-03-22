@@ -62,28 +62,28 @@ void Application::CreateScene()
 {
     // i forgot why im not using EntityID for everything in this function
     EntityID cameraEntity = currentScene->CreateCamera(
-        {5.5f, 2.5f, 3.27f},        // position
-        {-0.979f, -0.168f, -0.120f} // look direction
+        {-0.867f, 2.304f, -1.181f}, // position
+        {-0.298f, -0.144f, 0.944f}  // look direction
     );
 
     // maybe some instancing or something would be better here
     currentScene->CreateCube(
-        {-2.0f, 2.9f, 1.9f}, // position
+        {-1.8f, 2.3f, 4.1f}, // position
         {1.0f, 1.0f, 1.0f}   // scale
     );
     currentScene->CreateCube(
-        {-2.0f, 0.8f, 1.7f}, // position
+        {-3.0f, 1.0f, 3.9f}, // position
         {1.0f, 1.0f, 1.0f}   // scale
     );
     currentScene->CreateSphere(
-        1.0f, 20, 20,       // radius, slices, stacks
-        {0.0f, 1.0f, 5.0f}, // position
-        {1.0f, 1.0f, 1.0f}  // scale
+        1.0f, 20, 20,          // radius, slices, stacks
+        {-0.7f, 0.0f, 5.450f}, // position
+        {1.0f, 1.0f, 1.0f}     // scale
     );
     currentScene->CreateSphere(
-        1.0f, 20, 20,       // radius, slices, stacks
-        {0.0f, 1.0f, 0.0f}, // position
-        {1.0f, 1.0f, 1.0f}  // scale
+        1.0f, 20, 20,           // radius, slices, stacks
+        {-4.5f, 2.428f, 4.29f}, // position
+        {1.0f, 1.0f, 1.0f}      // scale
     );
     // removed ground plane until i create procedural grid for it
 
@@ -99,9 +99,9 @@ void Application::CreateScene()
     // );
 
     currentScene->CreatePointLight(
-        {0.0f, 2.0f, 2.5f},       // position
+        {-2.9f, 1.8f, 2.5f},      // position
         {1.0f, 1.0f, 1.0f, 1.0f}, // color
-        10.0f                     // range
+        7.5f                      // range
     );
 
     // currentScene->CreateSpotLight(

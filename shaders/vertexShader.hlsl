@@ -31,6 +31,8 @@ PS_INPUT main(VS_INPUT input)
     
     // transform vertex position to clip space
     output.position = mul(float4(input.position, 1.0f), wvp);
+    // calculate world position for lighting calculations
+    output.worldPos = mul(float4(input.position, 1.0f), world).xyz;
     
     // pass color and texture coordinates through
     output.color = input.color;
@@ -40,9 +42,6 @@ PS_INPUT main(VS_INPUT input)
     output.normal = normalize(mul(float4(input.normal, 0.0f), world).xyz);
     output.tangent = normalize(mul(float4(input.tangent, 0.0f), world).xyz);
     output.bitangent = normalize(mul(float4(input.bitangent, 0.0f), world).xyz);
-    
-    // calculate world position for lighting calculations
-    output.worldPos = mul(float4(input.position, 1.0f), world).xyz;
     
     return output;
 }
