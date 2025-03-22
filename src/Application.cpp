@@ -91,6 +91,7 @@ void Application::CreateScene()
      * @brief - multiple lights work now. however, the ambient term for every light but the first one is ignored it seems
      *
      * @todo - add a way to add/remove lights within the editor
+     * @warning - seems like the next light will also overwrite the intensity of the previous light
      */
 
     // some directional light (sun)
@@ -99,18 +100,25 @@ void Application::CreateScene()
         {0.7f, 0.7f, 0.7f, 1.0f} // color
     );
 
-    // point light 1 (warm)
+    // point light 1
     currentScene->CreatePointLight(
-        {-2.9f, 1.8f, 2.5f},      // position
-        {1.0f, 0.8f, 0.6f, 1.0f}, // color
+        {-4.0f, 2.5f, 2.5f},      // position
+        {1.0f, 0.0f, 0.0f, 1.0f}, // color
         7.5f                      // range
     );
 
-    // point light 2 (cool)
+    // point light 2
     currentScene->CreatePointLight(
-        {2.0f, 1.5f, 4.0f},       // position
-        {0.6f, 0.8f, 1.0f, 1.0f}, // color (cool)
-        5.0f                      // range
+        {-3.0f, 0.1f, 1.8f},      // position
+        {0.0f, 0.0f, 1.0f, 1.0f}, // color
+        7.5f                      // range
+    );
+
+    // point light 1
+    currentScene->CreatePointLight(
+        {-2.9f, 4.8f, 4.0f},      // position
+        {0.0f, 1.0f, 0.0f, 1.0f}, // color
+        7.5f                      // range
     );
 
     // currentScene->CreateSpotLight(
