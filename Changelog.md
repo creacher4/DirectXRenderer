@@ -223,6 +223,8 @@
 
 - Small update to the pixel shader.
 - Updated the scene for further testing.
+- Updates to the `MeshManager` class:
+  - Sphere mesh creation now uses optimized SIMD operations rather than manual ones.
 
 ---
 

@@ -134,53 +134,54 @@ MeshData MeshManager::CreateSphereMesh(float radius, int slices, int stacks)
             float sinTheta = sinf(theta);
             float cosTheta = cosf(theta);
 
+            // position
             DirectX::XMFLOAT3 position(
                 radius * sinPhi * cosTheta,
                 radius * cosPhi,
                 radius * sinPhi * sinTheta);
 
-            DirectX::XMFLOAT3 normal(
-                position.x / radius,
-                position.y / radius,
-                position.z / radius);
+            // position as vector for calculations
+            DirectX::XMVECTOR posVec = DirectX::XMLoadFloat3(&position);
 
+            // calculate normal vector
+            DirectX::XMVECTOR normalVec = DirectX::XMVector3Normalize(posVec);
+            DirectX::XMFLOAT3 normal;
+            DirectX::XMStoreFloat3(&normal, normalVec);
+
+            // calculate texture coordinates
             DirectX::XMFLOAT2 texCoord(
                 static_cast<float>(slice) / slices,
                 static_cast<float>(stack) / stacks);
 
-            // calculate proper tangent space vectors
+            // tangent space vectors
+            DirectX::XMVECTOR tangentVec;
             DirectX::XMFLOAT3 tangent;
-            DirectX::XMFLOAT3 bitangent;
-
-            // tangent along theta direction (around the sphere)
-            tangent.x = -radius * sinPhi * sinTheta;
-            tangent.y = 0;
-            tangent.z = radius * sinPhi * cosTheta;
 
             // handle poles where tangent would be zero
             if (sinPhi < 0.0001f)
             {
-                tangent = DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f);
+                tangentVec = DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
             }
             else
             {
+                // calculate tangent vector
+                tangent.x = -sinTheta;
+                tangent.y = 0;
+                tangent.z = cosTheta;
+
                 // normalize tangent
-                float len = sqrtf(tangent.x * tangent.x + tangent.y * tangent.y + tangent.z * tangent.z);
-                tangent.x /= len;
-                tangent.y /= len;
-                tangent.z /= len;
+                tangentVec = DirectX::XMLoadFloat3(&tangent);
+                tangentVec = DirectX::XMVector3Normalize(tangentVec);
             }
 
-            // calculate bitangent using cross product: B = N × T
-            bitangent.x = (normal.y * tangent.z) - (normal.z * tangent.y);
-            bitangent.y = (normal.z * tangent.x) - (normal.x * tangent.z);
-            bitangent.z = (normal.x * tangent.y) - (normal.y * tangent.x);
+            // calculate bitangent using cross product
+            DirectX::XMVECTOR bitangentVec = DirectX::XMVector3Cross(normalVec, tangentVec);
+            bitangentVec = DirectX::XMVector3Normalize(bitangentVec);
 
-            // normalize bitangent
-            float len = sqrtf(bitangent.x * bitangent.x + bitangent.y * bitangent.y + bitangent.z * bitangent.z);
-            bitangent.x /= len;
-            bitangent.y /= len;
-            bitangent.z /= len;
+            // store computed tangent calculations
+            DirectX::XMStoreFloat3(&tangent, tangentVec);
+            DirectX::XMFLOAT3 bitangent;
+            DirectX::XMStoreFloat3(&bitangent, bitangentVec);
 
             Vertex vertex;
             vertex.position = position;
@@ -296,55 +297,54 @@ MeshData MeshManager::CreatePlaneMesh(float width, float depth, int xDivs, int z
     return meshData;
 }
 
-// added a check for division by zero
-// if the denominator is too small, fallback to default tangent and bitangent
 void MeshManager::CalculateTangentBitangent(
     const DirectX::XMFLOAT3 &v0, const DirectX::XMFLOAT3 &v1, const DirectX::XMFLOAT3 &v2,
     const DirectX::XMFLOAT2 &uv0, const DirectX::XMFLOAT2 &uv1, const DirectX::XMFLOAT2 &uv2,
     DirectX::XMFLOAT3 &tangent, DirectX::XMFLOAT3 &bitangent)
 {
+    // using SIMD operations instead of manual calculations
     using namespace DirectX;
 
-    XMFLOAT3 edge1(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
-    XMFLOAT3 edge2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+    // load positions as vectors
+    XMVECTOR pos0 = XMLoadFloat3(&v0);
+    XMVECTOR pos1 = XMLoadFloat3(&v1);
+    XMVECTOR pos2 = XMLoadFloat3(&v2);
 
-    XMFLOAT2 deltaUV1(uv1.x - uv0.x, uv1.y - uv0.y);
-    XMFLOAT2 deltaUV2(uv2.x - uv0.x, uv2.y - uv0.y);
+    // calculate edges
+    XMVECTOR edge1 = XMVectorSubtract(pos1, pos0);
+    XMVECTOR edge2 = XMVectorSubtract(pos2, pos0);
 
-    float denominator = (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+    // calculate UV deltas
+    float du1 = uv1.x - uv0.x;
+    float dv1 = uv1.y - uv0.y;
+    float du2 = uv2.x - uv0.x;
+    float dv2 = uv2.y - uv0.y;
 
-    // check for division by zero
-    if (abs(denominator) < 0.000001f)
+    // check for degenerate UV mapping
+    float determinant = du1 * dv2 - du2 * dv1;
+    if (fabs(determinant) < 0.000001f)
     {
-        // fallback to default tangent and bitangent
+        // fallback to default vectors
         tangent = XMFLOAT3(1.0f, 0.0f, 0.0f);
         bitangent = XMFLOAT3(0.0f, 1.0f, 0.0f);
         return;
     }
 
-    float f = 1.0f / denominator;
+    float invDet = 1.0f / determinant;
 
-    tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
-    tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
-    tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+    // calculate tangent and bitanget
+    XMVECTOR scaledEdge1 = XMVectorScale(edge1, dv2 * invDet);
+    XMVECTOR scaledEdge2 = XMVectorScale(edge2, dv1 * invDet);
+    XMVECTOR T = XMVectorSubtract(scaledEdge1, scaledEdge2);
 
-    bitangent.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
-    bitangent.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
-    bitangent.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+    scaledEdge1 = XMVectorScale(edge2, du1 * invDet);
+    scaledEdge2 = XMVectorScale(edge1, du2 * invDet);
+    XMVECTOR B = XMVectorSubtract(scaledEdge1, scaledEdge2);
 
-    float tangentLength = sqrtf(tangent.x * tangent.x + tangent.y * tangent.y + tangent.z * tangent.z);
-    if (tangentLength > 0.00001f)
-    {
-        tangent.x /= tangentLength;
-        tangent.y /= tangentLength;
-        tangent.z /= tangentLength;
-    }
+    T = XMVector3Normalize(T);
+    B = XMVector3Normalize(B);
 
-    float bitangentLength = sqrtf(bitangent.x * bitangent.x + bitangent.y * bitangent.y + bitangent.z * bitangent.z);
-    if (bitangentLength > 0.00001f)
-    {
-        bitangent.x /= bitangentLength;
-        bitangent.y /= bitangentLength;
-        bitangent.z /= bitangentLength;
-    }
+    // normalize tangent and bitangent and store
+    XMStoreFloat3(&tangent, XMVector3Normalize(T));
+    XMStoreFloat3(&bitangent, XMVector3Normalize(B));
 }
