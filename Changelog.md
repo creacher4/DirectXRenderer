@@ -245,6 +245,7 @@
 - Changes to `main.cpp`.
   - Instead of returning -1, we can return `EXIT_FAILURE` which has much clearer intent.
 - Explicitly stated the `MeshManager` destructor as default.
+- Added a global ambient term to the pixel shader.
 
 ---
 

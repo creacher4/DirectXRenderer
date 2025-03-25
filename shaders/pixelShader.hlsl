@@ -211,15 +211,14 @@ float4 main(PS_INPUT input) : SV_Target
     // get view direction
     float3 viewDir = normalize(cameraPosition - input.worldPos);
     
-    // start with ambient light
-    float3 finalColor = float3(0, 0, 0);
+    // global ambient term
+    float3 globalAmbient = float3(0.1f, 0.1f, 0.1f) * baseColor;
+    float3 finalColor = globalAmbient;
 
     // iterate through active lights
     for (int i = 0; i < activeLightCount; i++)
     {
-        if (i == 0) {
-            finalColor += lights[i].ambientColor.rgb * baseColor;
-        }
+        float3 lightContribution = float3(0, 0, 0);
 
         // add appropriate light contribution based on light type
         if (lights[i].lightType == LIGHT_DIRECTIONAL)
