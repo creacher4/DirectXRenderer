@@ -24,13 +24,15 @@ Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> ResourceManager::LoadTexture(co
     HRESULT hr = DirectX::CreateWICTextureFromFile(
         device.Get(), context.Get(), filename.c_str(), nullptr, textureView.GetAddressOf());
 
-    if (SUCCEEDED(hr))
+    if (FAILED(hr))
     {
-        textures[filename] = textureView;
-        return textureView;
+        std::wstring msg = L"[ResourceManager] Failed to load texture: " + filename + L"\n";
+        OutputDebugString(msg.c_str());
+        return nullptr;
     }
 
-    return nullptr;
+    textures[filename] = textureView;
+    return textureView;
 }
 
 Microsoft::WRL::ComPtr<ID3D11Buffer> ResourceManager::CreateVertexBuffer(const void *data, UINT byteWidth)
@@ -45,7 +47,14 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> ResourceManager::CreateVertexBuffer(const v
 
     Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
     HRESULT hr = device->CreateBuffer(&vbDesc, &vbData, buffer.GetAddressOf());
-    return SUCCEEDED(hr) ? buffer : nullptr;
+
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create vertex buffer\n");
+        return nullptr;
+    }
+
+    return buffer;
 }
 
 Microsoft::WRL::ComPtr<ID3D11Buffer> ResourceManager::CreateIndexBuffer(const void *data, UINT byteWidth)
@@ -60,7 +69,14 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> ResourceManager::CreateIndexBuffer(const vo
 
     Microsoft::WRL::ComPtr<ID3D11Buffer> buffer;
     HRESULT hr = device->CreateBuffer(&ibDesc, &ibData, buffer.GetAddressOf());
-    return SUCCEEDED(hr) ? buffer : nullptr;
+
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create index buffer\n");
+        return nullptr;
+    }
+
+    return buffer;
 }
 
 Microsoft::WRL::ComPtr<ID3D11Buffer> ResourceManager::CreateConstantBuffer(UINT byteWidth, const void *initialData)
@@ -85,14 +101,27 @@ Microsoft::WRL::ComPtr<ID3D11Buffer> ResourceManager::CreateConstantBuffer(UINT 
         hr = device->CreateBuffer(&cbDesc, nullptr, buffer.GetAddressOf());
     }
 
-    return SUCCEEDED(hr) ? buffer : nullptr;
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create constant buffer\n");
+        return nullptr;
+    }
+
+    return buffer;
 }
 
 Microsoft::WRL::ComPtr<ID3D11RenderTargetView> ResourceManager::CreateRenderTargetView(Microsoft::WRL::ComPtr<ID3D11Texture2D> backBuffer)
 {
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView> renderTargetView;
     HRESULT hr = device->CreateRenderTargetView(backBuffer.Get(), nullptr, renderTargetView.GetAddressOf());
-    return SUCCEEDED(hr) ? renderTargetView : nullptr;
+
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create render target view\n");
+        return nullptr;
+    }
+
+    return renderTargetView;
 }
 
 Microsoft::WRL::ComPtr<ID3D11Texture2D> ResourceManager::CreateDepthStencilTexture(UINT width, UINT height)
@@ -110,14 +139,28 @@ Microsoft::WRL::ComPtr<ID3D11Texture2D> ResourceManager::CreateDepthStencilTextu
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D> depthStencilTexture;
     HRESULT hr = device->CreateTexture2D(&depthStencilDesc, nullptr, depthStencilTexture.GetAddressOf());
-    return SUCCEEDED(hr) ? depthStencilTexture : nullptr;
+
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create depth stencil texture\n");
+        return nullptr;
+    }
+
+    return depthStencilTexture;
 }
 
 Microsoft::WRL::ComPtr<ID3D11DepthStencilView> ResourceManager::CreateDepthStencilView(Microsoft::WRL::ComPtr<ID3D11Texture2D> depthStencilTexture)
 {
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView> depthStencilView;
     HRESULT hr = device->CreateDepthStencilView(depthStencilTexture.Get(), nullptr, depthStencilView.GetAddressOf());
-    return SUCCEEDED(hr) ? depthStencilView : nullptr;
+
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create depth stencil view\n");
+        return nullptr;
+    }
+
+    return depthStencilView;
 }
 
 Microsoft::WRL::ComPtr<ID3D11SamplerState> ResourceManager::CreateSamplerState()
@@ -133,7 +176,14 @@ Microsoft::WRL::ComPtr<ID3D11SamplerState> ResourceManager::CreateSamplerState()
 
     Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
     HRESULT hr = device->CreateSamplerState(&sampDesc, samplerState.GetAddressOf());
-    return SUCCEEDED(hr) ? samplerState : nullptr;
+
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create sampler state\n");
+        return nullptr;
+    }
+
+    return samplerState;
 }
 
 Microsoft::WRL::ComPtr<ID3D11RasterizerState> ResourceManager::CreateRasterizerState(bool wireframe)
@@ -146,7 +196,14 @@ Microsoft::WRL::ComPtr<ID3D11RasterizerState> ResourceManager::CreateRasterizerS
 
     Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizerState;
     HRESULT hr = device->CreateRasterizerState(&rasterizerDesc, rasterizerState.GetAddressOf());
-    return SUCCEEDED(hr) ? rasterizerState : nullptr;
+
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create rasterizer state\n");
+        return nullptr;
+    }
+
+    return rasterizerState;
 }
 
 Microsoft::WRL::ComPtr<ID3D11DepthStencilState> ResourceManager::CreateDepthStencilState()
@@ -159,7 +216,14 @@ Microsoft::WRL::ComPtr<ID3D11DepthStencilState> ResourceManager::CreateDepthSten
 
     Microsoft::WRL::ComPtr<ID3D11DepthStencilState> depthStencilState;
     HRESULT hr = device->CreateDepthStencilState(&depthStencilDesc, depthStencilState.GetAddressOf());
-    return SUCCEEDED(hr) ? depthStencilState : nullptr;
+
+    if (FAILED(hr))
+    {
+        OutputDebugString(L"[ResourceManager] Failed to create depth stencil state\n");
+        return nullptr;
+    }
+
+    return depthStencilState;
 }
 
 void ResourceManager::Release()

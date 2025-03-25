@@ -133,11 +133,11 @@ bool CameraManager::GetCameraPosition(DirectX::XMFLOAT3 &position)
         return false;
 
     auto entity = *cameraEntities.begin();
-    auto *transform = registry.GetComponent<TransformComponent>(entity);
+    auto *camera = registry.GetComponent<CameraComponent>(entity);
 
-    if (transform)
+    if (camera)
     {
-        position = transform->position;
+        position = camera->position;
         return true;
     }
 

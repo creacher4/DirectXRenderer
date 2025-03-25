@@ -20,7 +20,7 @@ class MeshManager
 {
 public:
     MeshManager(std::shared_ptr<ResourceManager> resourceManager);
-    ~MeshManager();
+    ~MeshManager() = default;
 
     MeshData CreateCubeMesh();
     MeshData CreateSphereMesh(float radius, int slices, int stacks);

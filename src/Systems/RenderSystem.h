@@ -52,11 +52,6 @@ public:
 private:
     bool LoadDefaultTextures();
 
-    void ConfigureCameraMatrices(DirectX::XMMATRIX &view, DirectX::XMMATRIX &projection);
-
-    EntityID FindMainCameraEntity();
-    void UpdateCameraMovement(float deltaTime);
-
     HWND windowHandle;
     UINT windowWidth;
     UINT windowHeight;

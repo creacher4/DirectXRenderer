@@ -235,6 +235,19 @@
 
 ---
 
+## 25th March, 2025
+
+- Small changes to the `CameraManager` class.
+  - Fixed the `GetCameraPosition` method to use the camera component directly rather than looking for a transform component.
+- Removed redundant camera methods in the `RenderSystem` class.
+- Added explicit error logging to the `ResourceManager` class.
+- Small changes to the `Registry`.
+- Changes to `main.cpp`.
+  - Instead of returning -1, we can return `EXIT_FAILURE` which has much clearer intent.
+- Explicitly stated the `MeshManager` destructor as default.
+
+---
+
 ## Known Bugs/Issues
 
 - When changing fov to 0, the program crashes with an assertion failure.

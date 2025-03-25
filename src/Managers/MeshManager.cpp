@@ -5,10 +5,6 @@ MeshManager::MeshManager(std::shared_ptr<ResourceManager> resourceManager)
 {
 }
 
-MeshManager::~MeshManager()
-{
-}
-
 // fixed cube mesh creation
 // calculates tangent and bitangent vectors for each face
 // based on the actual triangle vertices used to render it

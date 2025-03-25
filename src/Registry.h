@@ -39,12 +39,9 @@ public:
      */
     void DestroyEntity(EntityID entity)
     {
-        for (auto &componentTypeMap : componentMaps)
+        for (auto &[type, entityMap] : componentMaps)
         {
-            if (componentTypeMap.second.count(entity) > 0)
-            {
-                componentTypeMap.second.erase(entity);
-            }
+            entityMap.erase(entity);
         }
     }
 
@@ -72,7 +69,7 @@ public:
 
         auto component = std::make_unique<T>(std::forward<Args>(args)...);
         T *componentPtr = component.get();
-        mapIt->second.emplace(entity, std::move(component));
+        mapIt->second[entity] = std::move(component);
         return componentPtr;
     }
 

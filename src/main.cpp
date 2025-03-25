@@ -7,7 +7,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLi
     if (!app.Initialize())
     {
         MessageBox(NULL, L"Failed to initialize the application", L"Error", MB_OK | MB_ICONERROR);
-        return -1;
+        return EXIT_FAILURE;
     }
 
     app.Run();
