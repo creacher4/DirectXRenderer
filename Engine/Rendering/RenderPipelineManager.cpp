@@ -1,5 +1,5 @@
 #include "RenderPipelineManager.h"
-#include "../Managers/ShaderManager.h"
+#include "../Resources/ShaderManager.h"
 #include <d3dcompiler.h>
 
 RenderPipelineManager::RenderPipelineManager(std::shared_ptr<GraphicsDeviceManager> graphicsDevice,
@@ -29,10 +29,10 @@ bool RenderPipelineManager::LoadDefaultShaders()
     auto shaderManager = std::make_shared<ShaderManager>(resourceManager);
 
     Microsoft::WRL::ComPtr<ID3DBlob> vertexShaderBlob;
-    if (!shaderManager->CompileAndCreateVertexShader(L"shaders/vertexShader.hlsl", "main", defaultVertexShader, vertexShaderBlob))
+    if (!shaderManager->CompileAndCreateVertexShader(L"Engine/Shaders/vertexShader.hlsl", "main", defaultVertexShader, vertexShaderBlob))
         return false;
 
-    if (!shaderManager->CompileAndCreatePixelShader(L"shaders/pixelShader.hlsl", "main", defaultPixelShader))
+    if (!shaderManager->CompileAndCreatePixelShader(L"Engine/Shaders/pixelShader.hlsl", "main", defaultPixelShader))
         return false;
 
     return CreateDefaultInputLayout(vertexShaderBlob.Get()->GetBufferPointer(), vertexShaderBlob.Get()->GetBufferSize());

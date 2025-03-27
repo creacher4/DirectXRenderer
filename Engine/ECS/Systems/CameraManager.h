@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../Registry.h"
-#include "../Components/CameraComponent.h"
-#include "../Components/TransformComponent.h"
+#include "../../Engine/ECS/Registry.h"
+#include "../../Engine/ECS/Components/TransformComponent.h"
+#include "../../Engine/ECS/Components/CameraComponent.h"
 #include <DirectXMath.h>
 #include <Windows.h>
 

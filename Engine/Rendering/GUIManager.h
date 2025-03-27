@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Registry.h"
+#include "../ECS/Registry.h"
 #include <d3d11.h>
 #include <DirectXMath.h>
 #include <imgui.h>

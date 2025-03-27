@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Component.h"
+#include "../Component.h"
 #include <d3d11.h>
 #include <wrl/client.h>
 

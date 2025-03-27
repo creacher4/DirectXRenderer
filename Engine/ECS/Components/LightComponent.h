@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Component.h"
+#include "../Component.h"
 #include <DirectXMath.h>
 
 // scoped enum outside of class for better type safety and clarity

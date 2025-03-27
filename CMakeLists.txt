@@ -10,8 +10,8 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 file(GLOB_RECURSE SRC_FILES
-    "${PROJECT_SOURCE_DIR}/src/*.cpp"
-    "${PROJECT_SOURCE_DIR}/src/*.h"
+    "${PROJECT_SOURCE_DIR}/Engine/*.cpp"
+    "${PROJECT_SOURCE_DIR}/Engine/*.h"
 )
 
 # define ImGui sources
@@ -30,7 +30,7 @@ file(GLOB DXTK_FILES
 add_executable(DX11Engine WIN32 ${SRC_FILES} ${IMGUI_SOURCES} ${DXTK_FILES})
 
 target_include_directories(DX11Engine PRIVATE
-    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/Engine
     ${PROJECT_SOURCE_DIR}/External/imgui
     ${PROJECT_SOURCE_DIR}/External/imgui/backends
     ${PROJECT_SOURCE_DIR}/External/DirectXTK/Inc

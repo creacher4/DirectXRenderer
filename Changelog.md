@@ -249,6 +249,11 @@
 
 ---
 
+## 27th March, 2025
+
+- Migrated project into a new directory structure.
+  - Updated `CMakeLists.txt`.
+
 ## Known Bugs/Issues
 
 - When changing fov to 0, the program crashes with an assertion failure.

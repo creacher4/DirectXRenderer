@@ -6,7 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
-#include "../ResourceManager.h"
+#include "ResourceManager.h"
 
 class ShaderManager
 {

@@ -1,7 +1,7 @@
 #include "Application.h"
-#include "Components/TransformComponent.h"
-#include "Components/CameraComponent.h"
-#include "Components/LightComponent.h"
+#include "../ECS/Components/TransformComponent.h"
+#include "../ECS/Components/CameraComponent.h"
+#include "../ECS/Components/LightComponent.h"
 #include <imgui.h>
 #include <imgui_impl_win32.h>
 

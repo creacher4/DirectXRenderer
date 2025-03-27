@@ -1,6 +1,6 @@
 #pragma once
 
-#include "System.h"
+#include "../System.h"
 #include <windows.h>
 #include <DirectXMath.h>
 

@@ -1,9 +1,10 @@
 #include "GUIManager.h"
 #include "../Core/Timer.h"
-#include "../Components/TransformComponent.h"
-#include "../Components/CameraComponent.h"
-#include "../Components/LightComponent.h"
-#include "../Components/MaterialComponent.h"
+
+#include "../ECS/Components/TransformComponent.h"
+#include "../ECS/Components/CameraComponent.h"
+#include "../ECS/Components/LightComponent.h"
+#include "../ECS/Components/MaterialComponent.h"
 
 GUIManager::GUIManager(Registry &registry, HWND windowHandle, Timer &timer)
     : registry(registry), windowHandle(windowHandle), timer(timer)

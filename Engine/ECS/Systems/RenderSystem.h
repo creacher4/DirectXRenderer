@@ -1,15 +1,15 @@
 #pragma once
 
-#include "System.h"
-#include "../ResourceManager.h"
-#include "../Managers/MeshManager.h"
-#include "../Managers/ShaderManager.h"
-#include "../Managers/LightingManager.h"
-#include "../Managers/CameraManager.h"
-#include "../Core/Timer.h"
-#include "../Graphics/GraphicsDeviceManager.h"
-#include "../Graphics/RenderPipelineManager.h"
-#include "../Graphics/GUIManager.h"
+#include "../System.h"
+#include "../../Resources/ResourceManager.h"
+#include "../../Resources/MeshManager.h"
+#include "../../Resources/ShaderManager.h"
+#include "../../Rendering/LightingManager.h"
+#include "CameraManager.h"
+#include "../../Core/Timer.h"
+#include "../../Rendering/GraphicsDeviceManager.h"
+#include "../../Rendering/RenderPipelineManager.h"
+#include "../../Rendering/GUIManager.h"
 #include <d3d11.h>
 #include <wrl/client.h>
 #include <DirectXMath.h>

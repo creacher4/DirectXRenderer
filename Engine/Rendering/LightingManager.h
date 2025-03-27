@@ -4,9 +4,9 @@
 #include <wrl/client.h>
 #include <DirectXMath.h>
 #include <memory>
-#include "../Components/LightComponent.h"
-#include "../Registry.h"
-#include "../Buffers.h"
+#include "../ECS/Components/LightComponent.h"
+#include "../ECS/Registry.h"
+#include "Buffers.h"
 
 class LightingManager
 {

@@ -5,7 +5,7 @@
 #include <DirectXMath.h>
 #include <vector>
 #include <memory>
-#include "../Vertex.h"
+#include "../Rendering/Vertex.h"
 #include "ResourceManager.h"
 
 struct MeshData

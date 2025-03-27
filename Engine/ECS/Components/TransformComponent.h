@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Component.h"
+#include "../Component.h"
 #include <DirectXMath.h>
 
 // essentially the mesh transform component now

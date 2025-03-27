@@ -1,11 +1,11 @@
 #pragma once
 
-#include "Registry.h"
-#include "Systems/RenderSystem.h"
-#include "Systems/InputSystem.h"
-#include "Scene.h"
-#include "Core/WindowManager.h"
-#include "Core/Timer.h"
+#include "../ECS/Registry.h"
+#include "../ECS/Systems/InputSystem.h"
+#include "../ECS/Systems/RenderSystem.h"
+#include "../Scene/Scene.h"
+#include "WindowManager.h"
+#include "Timer.h"
 #include <windows.h>
 #include <string>
 #include <memory>

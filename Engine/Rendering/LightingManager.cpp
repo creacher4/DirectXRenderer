@@ -1,7 +1,7 @@
 #include "LightingManager.h"
-#include "../Components/TransformComponent.h"
+#include "../ECS/Components/TransformComponent.h"
 #include <DirectXMath.h>
-#include "../ResourceManager.h"
+#include "../Resources/ResourceManager.h"
 
 LightingManager::LightingManager(Microsoft::WRL::ComPtr<ID3D11Device> device,
                                  Microsoft::WRL::ComPtr<ID3D11DeviceContext> context,

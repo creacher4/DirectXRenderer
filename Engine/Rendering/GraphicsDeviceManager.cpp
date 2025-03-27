@@ -1,5 +1,5 @@
 #include "GraphicsDeviceManager.h"
-#include "../ResourceManager.h"
+#include "../Resources/ResourceManager.h"
 
 GraphicsDeviceManager::GraphicsDeviceManager(HWND windowHandle, UINT width, UINT height)
     : windowHandle(windowHandle), windowWidth(width), windowHeight(height)

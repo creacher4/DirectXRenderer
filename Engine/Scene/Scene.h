@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Registry.h"
-#include "Managers/MeshManager.h"
-#include "Managers/ShaderManager.h"
-#include "ResourceManager.h"
+#include "../Engine/ECS/Registry.h"
+#include "../Engine/Resources/MeshManager.h"
+#include "../Engine/Resources/ShaderManager.h"
+#include "../Engine/Resources/ResourceManager.h"
 #include <DirectXMath.h>
 #include <string>
 #include <memory>

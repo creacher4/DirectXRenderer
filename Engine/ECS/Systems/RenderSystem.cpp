@@ -1,11 +1,11 @@
 #include "RenderSystem.h"
 #include "../Component.h"
-#include "../Vertex.h"
-#include "../Buffers.h"
+#include "../../Rendering/Vertex.h"
+#include "../../Rendering/Buffers.h"
 #include "../Components/MeshComponent.h"
 #include "../Components/TransformComponent.h"
-#include "../Components/LightComponent.h"
 #include "../Components/CameraComponent.h"
+#include "../Components/LightComponent.h"
 #include "../Components/MaterialComponent.h"
 
 #include <DirectXMath.h>

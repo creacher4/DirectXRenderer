@@ -4,9 +4,9 @@
 #include <wrl/client.h>
 #include <DirectXMath.h>
 #include <memory>
-#include "../ResourceManager.h"
+#include "../Resources/ResourceManager.h"
 #include "GraphicsDeviceManager.h"
-#include "../Buffers.h"
+#include "Buffers.h"
 
 // documentation coming soon i promise
 class RenderPipelineManager

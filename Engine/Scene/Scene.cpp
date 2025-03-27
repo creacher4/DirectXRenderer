@@ -1,9 +1,9 @@
 #include "Scene.h"
-#include "Components/TransformComponent.h"
-#include "Components/MeshComponent.h"
-#include "Components/CameraComponent.h"
-#include "Components/LightComponent.h"
-#include "Components/MaterialComponent.h"
+#include "../Engine/ECS/Components/MeshComponent.h"
+#include "../Engine/ECS/Components/TransformComponent.h"
+#include "../Engine/ECS/Components/CameraComponent.h"
+#include "../Engine/ECS/Components/LightComponent.h"
+#include "../Engine/ECS/Components/MaterialComponent.h"
 
 // a lot of stuff needs to be fixed
 
