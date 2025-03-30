@@ -260,6 +260,8 @@
 
 - Fixed a bug where lights processed later in the light array would have their contribution (and the contribution of all lights before them) incorrectly scaled by their own intensity.
 
+---
+
 ## Known Bugs/Issues
 
 - When changing fov to 0, the program crashes with an assertion failure.
@@ -272,4 +274,4 @@
 
 ## Future Plans
 
-- No future plans
+- No future plans. I have stopped working on this version of the engine. See NOTE.md.
