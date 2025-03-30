@@ -223,19 +223,21 @@ float4 main(PS_INPUT input) : SV_Target
         // add appropriate light contribution based on light type
         if (lights[i].lightType == LIGHT_DIRECTIONAL)
         {
-            finalColor += CalculateDirectionalLight(lights[i], normal, viewDir, baseColor, roughness);
+            lightContribution += CalculateDirectionalLight(lights[i], normal, viewDir, baseColor, roughness);
         }
         else if (lights[i].lightType == LIGHT_POINT)
         {
-            finalColor += CalculatePointLight(lights[i], normal, input.worldPos, viewDir, baseColor, roughness);
+            lightContribution += CalculatePointLight(lights[i], normal, input.worldPos, viewDir, baseColor, roughness);
         }
         else if (lights[i].lightType == LIGHT_SPOT)
         {
-            finalColor += CalculateSpotLight(lights[i], normal, input.worldPos, viewDir, baseColor, roughness);
+            lightContribution += CalculateSpotLight(lights[i], normal, input.worldPos, viewDir, baseColor, roughness);
         }
 
         // apply light intensity
-        finalColor *= lights[i].lightIntensity;
+        lightContribution *= lights[i].lightIntensity;
+        // add to final color
+        finalColor += lightContribution;
     }
     
     // add stylized rim lighting

@@ -254,6 +254,12 @@
 - Migrated project into a new directory structure.
   - Updated `CMakeLists.txt`.
 
+---
+
+## 30th March, 2025
+
+- Fixed a bug where lights processed later in the light array would have their contribution (and the contribution of all lights before them) incorrectly scaled by their own intensity.
+
 ## Known Bugs/Issues
 
 - When changing fov to 0, the program crashes with an assertion failure.
