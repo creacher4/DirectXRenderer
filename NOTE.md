@@ -1,17 +1,20 @@
 hi.
 
-im creacher4, the creator of this engine. i just wanna say, this might be the worst code i've ever written in my life, but it's probably also the most code i've ever written too. i think i've written more code in this one project than i ever have before combined.
+im creacher4, the creator of this dx11 based rendering engine. i just wanna say, this might be the worst code i've ever written in my life, but it's probably also the most code i've ever written too. i think i've written more code in this one project than i ever have before combined. and all in all, it's taught me a lot about graphics programming, oop principles and engine architecture.
 
-after crashing out multiple times while trying to refactor this mess of a program, i decided to take the ECS approach. and now im having nightmares about the phrase 'separation of concerns'.
+after crashing out multiple times while trying to refactor this mess of a program, i decided to take the ECS approach. and now im having nightmares about the phrase 'separation of concerns'. unfortunately, to save my mental, im in no mood to continue working on this version of this engine because it's so terrible designed and written that it would literally take less effort to start from scratch than continue working on it.
 
-what i've come to realise is that after struggling to properly comment my work, i'd much rather create documentation for it, either using doxygen or gitbooks and then just linking the documentation wherever i need to in the codebase.
+~~but yeah, let me stop yapping, i just wanted to say there's a reason there's barely any comments and i know there's lots of inefficient code at the moment, but documentation and fixes are on their way.~~
 
-yes, i know the difference between this and the previous version is gigantic but as someone who's entire mood relies on if their program works or not, i got a bit too excited when it did start working. i also never stop. if it works, i'll just move on to adding some other feature instead of trying to fix my codebase and improve it's efficiency. i also haven't added any debugging.
+no more updates will take place for this version of the engine. it was never feature complete to begin with and i've come to realise that adding more features 
+to the state that this engine is in currently is not a good idea.
 
-there originally was a debug class buried somewhere inside the program but then my professor told me about breakpoints so yeah. you can guess what happened to the debug class.
+i have a few other things on my mind currently, specifically in terms of uni and just other uni assignments but im heavily invested in the whole graphics programming side of game development that i would like to turn this into a cute little rendering engine. unfortunately, like i said just above, it wont be happening to this version. 
 
-but yeah, let me stop yapping, i just wanted to say there's a reason there's barely any comments and i know there's lots of inefficient code at the moment, but documentation and fixes are on their way.
+when i talked about starting from scratch, i was serious and so i have another repo that will go public at some point when im happy (with a better more detailed changelog, better commit history, better comments and no actual deadline)
 
-im also averaging like 7 hours a day, 6 days a week because i have nothing better to do.
+im thankful i got an excuse to start this project because it has taught me a lot of things i dont think i would've learnt otherwise so
 
-the engine is NOT feature complete yet.
+yeah
+
+
