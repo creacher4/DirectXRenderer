@@ -272,16 +272,4 @@
 
 ## Future Plans
 
-- NOTE: A lot of the plans I want to take to make this engine better are written within the codebase itself. Also, the engine is not feature complete yet. Both for my taste and for my university assignment.
-- Adding documentation either via `Doxygen` or `GitBook`.
-- Adding model loading via `Assimp`.
-- Supporting multiple cameras or a dedicated 'main' camera.
-- Moving movement logic to a separate controller.
-- Combine multiple lights rather than using the first light entity.
-  - Essentially, creating more light entities rather than splitting light types between one light entity.
-- Possibly splitting pipeline manager's responsibilities further (into a state manager, a buffer manager, and a draw call manager for example).
-- Isolating utility functions (like the tangent/bitangent calculations) into a maths class or similar.
-- Split entity management into a dedicated `EntityManager` class to further decouple entity lifecycles from component storage.
-- Learn about cache-friendly structures such as sparse sets.
-- Set up an event or message-passing system.
-- Some other stuff I'm probably forgetting but writing this here as a note to myself in case someone attacks me for it.
+- No future plans
